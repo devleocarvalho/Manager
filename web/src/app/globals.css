@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark Theme Default */
+    --background: #0b0d11;
+    --foreground: #f8fafc;
+    --card: rgba(18, 21, 28, 0.85);
+    --card-foreground: #f8fafc;
+    --popover: #12151c;
+    --popover-foreground: #f8fafc;
+    
+    /* Neon & Vibrancy Colors */
+    --primary: #8b5cf6; /* Violet Neon */
+    --primary-foreground: #ffffff;
+    --secondary: #1e2433;
+    --secondary-foreground: #f8fafc;
+    --muted: #181d28;
+    --muted-foreground: #94a3b8;
+    --accent: #3b82f6; /* Electric Blue */
+    --accent-foreground: #ffffff;
+    
+    /* Status Colors */
+    --destructive: #ef4444; /* Alert / Red */
+    --destructive-foreground: #ffffff;
+    --warning: #f59e0b; /* Amber */
+    --warning-foreground: #1e293b;
+    --success: #10b981; /* Emerald Neon */
+    --success-foreground: #ffffff;
+
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.07);
+    --ring: #8b5cf6;
+    --radius: 1rem;
+  }
+
+  /* Light Theme (Modo Dia) */
+  :root.light, [data-theme="light"] {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: rgba(255, 255, 255, 0.9);
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    
+    --primary: #7c3aed;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+    --muted: #e2e8f0;
+    --muted-foreground: #64748b;
+    --accent: #2563eb;
+    --accent-foreground: #ffffff;
+    
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --warning: #d97706;
+    --warning-foreground: #ffffff;
+    --success: #059669;
+    --success-foreground: #ffffff;
+
+    --border: rgba(15, 23, 42, 0.12);
+    --input: rgba(15, 23, 42, 0.05);
+    --ring: #7c3aed;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
+
+/* Glassmorphism & UI Accents */
+.glass {
+  @apply bg-card backdrop-blur-xl border border-border shadow-2xl;
+}
+.glass-panel {
+  @apply bg-card backdrop-blur-md border border-border rounded-2xl p-6 transition-all shadow-sm;
+}
+
+/* Animações Chamativas de Fast-Food & KDS */
+@keyframes flash-screen-anim {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 40px 10px rgba(139, 92, 246, 0.45);
+  }
+}
+
+@keyframes pulse-urgent-anim {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.4);
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 1);
+    background-color: rgba(239, 68, 68, 0.2);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes ready-bounce-anim {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(15deg); }
+  40%, 80% { transform: rotate(-15deg); }
+}
+
+.flash-screen {
+  animation: flash-screen-anim 0.8s ease-in-out 3;
+}
+
+.pulse-urgent {
+  animation: pulse-urgent-anim 1.5s infinite;
+}
+
+.ready-bounce {
+  animation: ready-bounce-anim 2s infinite ease-in-out;
+}
+
+.bell-ring-active {
+  animation: bell-ring 0.6s ease-in-out infinite;
+}
+
+
