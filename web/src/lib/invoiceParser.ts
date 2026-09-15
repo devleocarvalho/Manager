@@ -5,6 +5,7 @@ export interface RawInvoiceItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  unit?: string;
 }
 
 export interface SandwichCostUpdate {

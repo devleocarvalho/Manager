@@ -21,6 +21,7 @@ export default function EstoquePage() {
     name: "",
     lote: "",
     quantity: "",
+    unit: "un",
     days_to_expire: "",
     locator: "",
     cost_price: "",
@@ -37,6 +38,7 @@ export default function EstoquePage() {
         name: formData.name,
         lote: formData.lote,
         quantity: Number(formData.quantity),
+        unit: formData.unit,
         days_to_expire: Number(formData.days_to_expire),
         locator: formData.locator,
         cost_price: Number(formData.cost_price),
@@ -45,7 +47,8 @@ export default function EstoquePage() {
           date: new Date().toISOString(),
           supplier: formData.supplier,
           price: Number(formData.cost_price),
-          quantity: Number(formData.quantity)
+          quantity: Number(formData.quantity),
+          unit: formData.unit
         }]
       });
 
@@ -60,7 +63,7 @@ export default function EstoquePage() {
       });
 
       setShowForm(false);
-      setFormData({ name: "", lote: "", quantity: "", days_to_expire: "", locator: "", cost_price: "", supplier: "" });
+      setFormData({ name: "", lote: "", quantity: "", unit: "un", days_to_expire: "", locator: "", cost_price: "", supplier: "" });
       alert("Lote adicionado com sucesso e despesa registrada no financeiro!");
       setRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -131,16 +134,26 @@ export default function EstoquePage() {
                 <input required type="text" value={formData.lote} onChange={e => setFormData({...formData, lote: e.target.value})} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">Quantidade Comprada</label>
-                <input required type="number" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" />
+                <label className="block text-xs font-bold text-muted-foreground mb-1">Quantidade e Unidade</label>
+                <div className="flex gap-2">
+                  <input required type="number" step="0.01" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} className="flex-1 bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" placeholder="Qtd" />
+                  <select value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-24 bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary">
+                    <option value="un">Un (Und)</option>
+                    <option value="kg">Kg (Quilo)</option>
+                    <option value="g">g (Grama)</option>
+                    <option value="l">L (Litro)</option>
+                    <option value="ml">ml (Milili)</option>
+                    <option value="pct">Pct (Pcte)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground mb-1">Custo Unitário (R$ / {formData.unit})</label>
+                <input required type="number" step="0.01" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" placeholder={`Ex: Custo por 1 ${formData.unit}`} />
               </div>
               <div>
                 <label className="block text-xs font-bold text-muted-foreground mb-1">Dias para Vencer</label>
                 <input required type="number" value={formData.days_to_expire} onChange={e => setFormData({...formData, days_to_expire: e.target.value})} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">Custo Unitário (R$)</label>
-                <input required type="number" step="0.01" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-muted-foreground mb-1">Fornecedor</label>

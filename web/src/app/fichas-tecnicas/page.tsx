@@ -25,14 +25,16 @@ interface InventoryItem {
   name: string;
   quantity: number;
   cost_price: number;
+  unit?: string;
   lote?: string;
 }
 
 interface IngredientLine {
   name: string;
   quantity: string;
-  unit: "g" | "kg" | "un" | "fatias" | "ml";
-  unitCost: number; // Custo estimado por unidade/grama
+  unit: "g" | "kg" | "un" | "fatias" | "ml" | "l" | "pct";
+  unitCost: number; // Custo base do estoque
+  inventoryUnit?: string; // Unidade base no estoque (para conversão)
 }
 
 interface TechnicalSheet {
@@ -102,6 +104,7 @@ export default function FichasTecnicasPage() {
         name: d.data().name || "",
         quantity: Number(d.data().quantity) || 0,
         cost_price: Number(d.data().cost_price) || 0,
+        unit: d.data().unit || "un",
         lote: d.data().lote
       }));
       setStockItems(items);
@@ -141,11 +144,18 @@ export default function FichasTecnicasPage() {
       const foundStock = stockItems.find(s => s.name.toLowerCase() === String(value).toLowerCase());
       if (foundStock && foundStock.cost_price > 0) {
         newIng[index].unitCost = foundStock.cost_price;
+        newIng[index].inventoryUnit = foundStock.unit;
+        
+        // Sugestão de unidade inteligente
+        if (foundStock.unit === "kg") newIng[index].unit = "g";
+        else if (foundStock.unit === "l") newIng[index].unit = "ml";
+        else newIng[index].unit = foundStock.unit as any || "un";
       } else {
         const foundPreset = INSUMO_PRESETS.find(p => p.name.toLowerCase() === String(value).toLowerCase());
         if (foundPreset) {
           newIng[index].unitCost = foundPreset.defaultCost;
           newIng[index].unit = foundPreset.unit as any;
+          newIng[index].inventoryUnit = foundPreset.unit;
           if (!newIng[index].quantity) newIng[index].quantity = foundPreset.defaultQty;
         }
       }
@@ -160,16 +170,25 @@ export default function FichasTecnicasPage() {
       name: preset.name,
       quantity: preset.defaultQty,
       unit: preset.unit as any,
-      unitCost: preset.defaultCost
+      unitCost: preset.defaultCost,
+      inventoryUnit: preset.unit
     };
     setIngredients(newIng);
   };
 
-  // Cálculo de Custo Estimado da Receita (CMV Unitário)
+  // Cálculo de Custo Estimado da Receita (CMV Unitário) com Conversão
   const totalCostEstimated = ingredients.reduce((sum, ing) => {
     const qty = Number(ing.quantity) || 0;
-    const cost = Number(ing.unitCost) || 0;
-    return sum + (qty * cost);
+    let costPerUnit = Number(ing.unitCost) || 0;
+
+    // Se a receita usa gramas e o estoque é em Kg (ou ml/Litro), converte o preço
+    if (ing.inventoryUnit === "kg" && ing.unit === "g") {
+      costPerUnit = costPerUnit / 1000;
+    } else if (ing.inventoryUnit === "l" && ing.unit === "ml") {
+      costPerUnit = costPerUnit / 1000;
+    }
+
+    return sum + (qty * costPerUnit);
   }, 0);
 
   // Margem de Lucro Bruto Estimada
@@ -195,7 +214,8 @@ export default function FichasTecnicasPage() {
         ingredientName: ing.name.trim(),
         quantityNeeded: Number(ing.quantity),
         unit: ing.unit,
-        unitCost: ing.unitCost || 0
+        unitCost: ing.unitCost || 0,
+        inventoryUnit: ing.inventoryUnit || ing.unit
       }));
 
       await addDoc(collection(db, "technical_sheets"), {

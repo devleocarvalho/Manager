@@ -162,6 +162,7 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
           name: item.normalizedName,
           lote: `NF-${Math.floor(1000 + Math.random() * 9000)}`,
           quantity: item.quantity,
+          unit: item.unit || "un", // Usa a unidade da nota ou padrão 'un'
           days_to_expire: 30, // Estimativa padrão
           locator: "Estoque Geral / Freezer",
           cost_price: item.unitPrice,
@@ -170,7 +171,8 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
             date: new Date().toISOString(),
             supplier: processedData.supplier,
             price: item.unitPrice,
-            quantity: item.quantity
+            quantity: item.quantity,
+            unit: item.unit || "un"
           }]
         });
       }
@@ -396,6 +398,7 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
                       <tr className="border-b border-border text-muted-foreground uppercase font-bold text-[10px]">
                         <th className="pb-2.5">Descrição Original na Nota</th>
                         <th className="pb-2.5">Insumo Normalizado no Manager</th>
+                        <th className="pb-2.5">Unidade</th>
                         <th className="pb-2.5 text-center">Qtd</th>
                         <th className="pb-2.5 text-right">Preço Unit.</th>
                         <th className="pb-2.5 text-right">Total</th>
@@ -412,6 +415,26 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
                               onChange={e => handleNormalizedChange(item.id, e.target.value)}
                               className="bg-black/5 dark:bg-white/5 border border-border rounded-lg px-2 py-1 text-xs font-bold text-foreground w-full focus:outline-none focus:border-primary"
                             />
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <select
+                              value={item.unit || "un"}
+                              onChange={e => {
+                                if (!processedData) return;
+                                const updatedItems = processedData.items.map(it => 
+                                  it.id === item.id ? { ...it, unit: e.target.value } : it
+                                );
+                                setProcessedData({ ...processedData, items: updatedItems });
+                              }}
+                              className="bg-black/5 dark:bg-white/5 border border-border rounded-lg px-2 py-1 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                            >
+                              <option value="un">Un</option>
+                              <option value="kg">Kg</option>
+                              <option value="g">g</option>
+                              <option value="l">L</option>
+                              <option value="ml">ml</option>
+                              <option value="pct">Pct</option>
+                            </select>
                           </td>
                           <td className="py-2.5 text-center font-bold text-foreground">{item.quantity}</td>
                           <td className="py-2.5 text-right font-semibold text-foreground">R$ {item.unitPrice.toFixed(2)}</td>

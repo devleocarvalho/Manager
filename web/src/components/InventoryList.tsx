@@ -64,8 +64,12 @@ export function InventoryList() {
                       Lote: <strong className="text-foreground">{item.lote}</strong> <br/>
                       <span className="text-[11px] text-muted-foreground">{item.locator}</span>
                     </td>
-                    <td className="py-3 text-center text-foreground font-bold">{item.quantity}</td>
-                    <td className="py-3 text-right text-success font-black">R$ {Number(item.cost_price).toFixed(2)}</td>
+                    <td className="py-3 text-center text-foreground font-bold">
+                      {item.quantity} <span className="text-[10px] text-muted-foreground font-normal ml-0.5">{item.unit || "un"}</span>
+                    </td>
+                    <td className="py-3 text-right text-success font-black">
+                      R$ {Number(item.cost_price).toFixed(2)} <span className="text-[10px] text-muted-foreground font-normal">/ {item.unit || "un"}</span>
+                    </td>
                     <td className="py-3 text-right">
                       <button 
                         onClick={() => setSelectedItem(item)}
@@ -114,8 +118,8 @@ export function InventoryList() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-foreground text-xs">R$ {Number(compra.price).toFixed(2)} / un</p>
-                        <p className="text-[11px] text-muted-foreground font-medium">Qtd: {compra.quantity}</p>
+                        <p className="font-black text-foreground text-xs">R$ {Number(compra.price).toFixed(2)} / {compra.unit || selectedItem.unit || 'un'}</p>
+                        <p className="text-[11px] text-muted-foreground font-medium">Qtd: {compra.quantity} {compra.unit || selectedItem.unit || 'un'}</p>
                       </div>
                     </div>
                   ))}

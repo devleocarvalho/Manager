@@ -7,6 +7,7 @@ export interface TechnicalSheetItem {
   quantityNeeded: number;
   unit?: string;
   unitCost?: number;
+  inventoryUnit?: string;
 }
 
 export interface TechnicalSheet {
@@ -42,7 +43,17 @@ export async function processSaleDeduction(tenantId: string, menuItemName: strin
 
       // Dedução de cada insumo da Ficha Técnica via FEFO
       for (const item of sheet.items) {
-        const totalNeeded = Number(item.quantityNeeded) * quantitySold;
+        let totalNeeded = Number(item.quantityNeeded) * quantitySold;
+        const recipeUnit = item.unit || "un";
+        const invUnit = item.inventoryUnit || recipeUnit;
+
+        // Se a receita pede "g" e o estoque é em "kg", convertemos a quantidade necessária para "kg"
+        if (invUnit === "kg" && recipeUnit === "g") {
+          totalNeeded = totalNeeded / 1000;
+        } else if (invUnit === "l" && recipeUnit === "ml") {
+          totalNeeded = totalNeeded / 1000;
+        }
+
         let remainingToDeduct = totalNeeded;
 
         // Buscar lotes do insumo ordenados por dias para vencer (FEFO)
@@ -79,11 +90,11 @@ export async function processSaleDeduction(tenantId: string, menuItemName: strin
             quantity: newQty
           });
 
-          alerts.push(`✅ Usado ${deductAmount} ${item.unit || 'un'} de ${item.ingredientName} (Lote #${invData.lote || 'N/A'}).`);
+          alerts.push(`✅ Usado ${deductAmount} ${invUnit} de ${item.ingredientName} (Lote #${invData.lote || 'N/A'}).`);
         }
 
         if (remainingToDeduct > 0) {
-          alerts.push(`🚨 Estoque insuficiente para ${item.ingredientName}. Faltou baixar ${remainingToDeduct} ${item.unit || 'un'}.`);
+          alerts.push(`🚨 Estoque insuficiente para ${item.ingredientName}. Faltou baixar ${remainingToDeduct} ${invUnit}.`);
         }
       }
 
