@@ -1,20 +1,25 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 
+// Configuração carregada exclusivamente de variáveis de ambiente (NEXT_PUBLIC_FIREBASE_*)
+// Em produção (Vercel): configurar nas Environment Variables do painel
+// Em desenvolvimento local: configurar no arquivo .env.local (protegido pelo .gitignore)
 const firebaseConfig = {
-  apiKey: "AIzaSyB-fAv16ipR0IlSN-rJCdW4TGnpCzjRIWo",
-  authDomain: "meugerente-8ef4b.firebaseapp.com",
-  projectId: "meugerente-8ef4b",
-  storageBucket: "meugerente-8ef4b.firebasestorage.app",
-  messagingSenderId: "401588269748",
-  appId: "1:401588269748:web:f963da68bb657be79b9de1",
-  measurementId: "G-EC1VDR80FJ"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ""
 };
 
-// Singleton pattern
+// Padrão Singleton para evitar reinicializações no Next.js
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
+export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
 

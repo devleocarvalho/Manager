@@ -17,8 +17,10 @@ import { Sidebar } from "../components/Sidebar";
 import { StockRadar } from "../components/StockRadar";
 import { MenuStars } from "../components/MenuStars";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
+  const { tenantId, tenantProfile } = useAuth();
   const [loadingData, setLoadingData] = useState(true);
   const [lucroDoDia, setLucroDoDia] = useState(0);
   const [desperdicioTotal, setDesperdicioTotal] = useState(0);
@@ -28,10 +30,12 @@ export default function Dashboard() {
   const [cmvMedio, setCmvMedio] = useState(0);
 
   useEffect(() => {
+    if (!tenantId) return;
+
     // Escutando as transações financeiras em tempo real do Firebase Firestore
     const q = query(
       collection(db, "financial_transactions"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -6,8 +6,10 @@ import { ThemeToggle } from "../../components/ThemeToggle";
 import { Wallet, Download, TrendingUp, TrendingDown, DollarSign, Plus } from "lucide-react";
 import { collection, onSnapshot, query, where, addDoc, orderBy } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useAuth } from "../../context/AuthContext";
 
 export default function FinanceiroPage() {
+  const { tenantId } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -25,9 +27,11 @@ export default function FinanceiroPage() {
   });
 
   useEffect(() => {
+    if (!tenantId) return;
+
     const q = query(
       collection(db, "financial_transactions"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -52,13 +56,13 @@ export default function FinanceiroPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await addDoc(collection(db, "financial_transactions"), {
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         type: formData.type,
         category: formData.category,
         amount: Number(formData.amount),

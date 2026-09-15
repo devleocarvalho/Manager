@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "../context/AuthContext";
+import { SubscriptionGate } from "../components/SubscriptionGate";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -8,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Manager",
-  description: "Gerencie seu comércio",
+  title: "Manager - Gestão Comercial SaaS",
+  description: "Sistema de gestão inteligente para estabelecimentos gastronômicos e comerciais.",
 };
 
 export default function RootLayout({
@@ -22,7 +24,13 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>
+          <SubscriptionGate>
+            {children}
+          </SubscriptionGate>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

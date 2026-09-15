@@ -4,16 +4,20 @@ import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { History, Package, X } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export function InventoryList() {
+  const { tenantId } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
   useEffect(() => {
+    if (!tenantId) return;
+
     const q = query(
       collection(db, "inventory_items"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -26,7 +30,7 @@ export function InventoryList() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   return (
     <>

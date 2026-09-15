@@ -33,6 +33,7 @@ import { db } from "../../lib/firebase";
 import { playNewOrderSound, playUrgentAlertSound } from "../../lib/sound";
 import { isOrderFastTrack, calculateOrderEstimatedMinutes, ITEM_PREP_TIMES } from "../../lib/orderEstimator";
 import { syncEngine } from "../../lib/syncEngine";
+import { useAuth } from "../../context/AuthContext";
 
 export interface OrderItem {
   name: string;
@@ -60,6 +61,7 @@ export interface Order {
 }
 
 export default function CozinhaPage() {
+  const { tenantId } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -78,6 +80,8 @@ export default function CozinhaPage() {
 
   // Escuta os pedidos em tempo real (Firebase + Local Storage Híbrido)
   useEffect(() => {
+    if (!tenantId) return;
+
     // 1. Carrega pedidos locais iniciais
     const localOrders = syncEngine.getLocalCollection("meugerente_local_orders");
     if (localOrders.length > 0) {
@@ -88,7 +92,7 @@ export default function CozinhaPage() {
     // 2. Listener do Firebase Firestore
     const q = query(
       collection(db, "orders"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -393,10 +397,15 @@ export default function CozinhaPage() {
                               {order.order_type === 'viagem' ? '🛍️ Viagem' : '🍔 Salão'}
                             </span>
                           )}
+                          {order.customer_name.toLowerCase().includes("mesa") && (
+                            <span className="text-[11px] px-2.5 py-0.5 rounded-full font-black uppercase bg-primary text-white flex items-center gap-1 shadow-sm">
+                              🍽️ {order.customer_name.split("(")[0].trim()}
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-0.5 font-medium">
-                          Cliente: <span className="text-foreground font-semibold">{order.customer_name}</span>
+                          Identificação: <span className="text-foreground font-semibold">{order.customer_name}</span>
                         </p>
                       </div>
 
@@ -445,13 +454,22 @@ export default function CozinhaPage() {
                       ))}
                     </div>
 
-                    {/* Botão: Iniciar Preparo (Não-cronológico: pode começar qualquer um!) */}
-                    <button
-                      onClick={() => handleUpdateStatus(order.id, "preparando")}
-                      className="w-full py-3 bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accent/25 transition-all text-sm active:scale-95"
-                    >
-                      <Play size={16} /> Iniciar Preparo na Chapa
-                    </button>
+                    {/* Botões de Ação na Fila */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => handleUpdateStatus(order.id, "preparando")}
+                        className="flex-1 py-3 bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accent/25 transition-all text-xs sm:text-sm active:scale-95"
+                      >
+                        <Play size={16} /> Iniciar na Chapa
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(order.id, "pronto")}
+                        title="Se o item saiu rápido, passe direto para pronto sem esperar a ordem da esteira!"
+                        className="py-3 px-3 bg-amber-400 hover:bg-amber-500 text-black font-black rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all text-xs active:scale-95 whitespace-nowrap"
+                      >
+                        <Zap size={14} className="fill-black" /> Pronto Direto ⚡
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -590,7 +608,7 @@ export default function CozinhaPage() {
                     onClick={() => handleUpdateStatus(order.id, "entregue")}
                     className="w-full py-2.5 bg-foreground text-background font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs hover:opacity-90 active:scale-95"
                   >
-                    <Check size={16} /> Confirmar Entrega ao Cliente
+                    <Check size={16} /> {order.customer_name?.toLowerCase().includes("mesa") ? "🍽️ Servido na Mesa / Concluído" : "Confirmar Entrega ao Cliente"}
                   </button>
                 </div>
               ))

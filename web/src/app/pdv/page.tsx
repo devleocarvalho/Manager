@@ -26,7 +26,8 @@ import {
   Zap,
   Volume2,
   VolumeX,
-  Check
+  Check,
+  UtensilsCrossed
 } from "lucide-react";
 import { collection, onSnapshot, query, where, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -38,6 +39,7 @@ import {
   isOrderFastTrack, 
   ITEM_PREP_TIMES 
 } from "../../lib/orderEstimator";
+import { useAuth } from "../../context/AuthContext";
 
 interface MenuItem {
   id: string;
@@ -75,11 +77,14 @@ const DEFAULT_MENU: MenuItem[] = [
 ];
 
 export default function PdvPage() {
+  const { tenantId } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [orderType, setOrderType] = useState<"local" | "viagem">("local");
+  const [destinationType, setDestinationType] = useState<"balcao" | "mesa">("balcao");
+  const [selectedTableNumber, setSelectedTableNumber] = useState<number>(1);
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro">("pix");
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<string[]>([]);
@@ -91,11 +96,18 @@ export default function PdvPage() {
   const [readyOrders, setReadyOrders] = useState<ReadyOrder[]>([]);
   const previousReadyCountRef = useRef<number | null>(null);
 
-  // Escuta a fila da Cozinha em tempo real (Firebase + Local Event Bus)
+  // Composições dinâmicas das Fichas Técnicas e Lista de Mesas
+  const [customMenu, setCustomMenu] = useState<MenuItem[]>([]);
+  const [tablesList, setTablesList] = useState<Array<{ id: string; number: number; name: string; status: string }>>([]);
+
+  // Escuta a fila da Cozinha, Fichas Técnicas e Mesas em tempo real
   useEffect(() => {
+    if (!tenantId) return;
+
+    // 1. Cozinha / Pedidos
     const q = query(
       collection(db, "orders"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -129,7 +141,43 @@ export default function PdvPage() {
       setReadyOrders(readyList);
     });
 
-    // Listener de Eventos Locais (Sem Internet)
+    // 2. Fichas Técnicas (Composições cadastradas pelo dono)
+    const qSheets = query(
+      collection(db, "technical_sheets"),
+      where("tenant_id", "==", tenantId)
+    );
+    const unsubSheets = onSnapshot(qSheets, (snapshot) => {
+      const sheets: MenuItem[] = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: `sheet-${d.id}`,
+          name: data.menuItemName,
+          category: data.category || "lanches",
+          price: Number(data.salePrice) || 28.00,
+          description: `Composição: ${data.items?.length || 0} insumos vinculados ao estoque.`,
+          popular: true
+        };
+      });
+      setCustomMenu(sheets);
+    });
+
+    // 3. Mesas
+    const qTables = query(
+      collection(db, "tables"),
+      where("tenant_id", "==", tenantId)
+    );
+    const unsubTables = onSnapshot(qTables, (snapshot) => {
+      const list = snapshot.docs.map(d => ({
+        id: d.id,
+        number: d.data().number,
+        name: d.data().name,
+        status: d.data().status
+      }));
+      list.sort((a, b) => a.number - b.number);
+      setTablesList(list);
+    });
+
+    // 4. Listener de Eventos Locais (Sem Internet)
     const handleLocalEvent = (e: any) => {
       const { type, payload } = e.detail || {};
       if (type === "ORDER_STATUS_CHANGED" && payload?.status === "pronto") {
@@ -140,12 +188,20 @@ export default function PdvPage() {
 
     return () => {
       unsubscribe();
+      unsubSheets();
+      unsubTables();
       window.removeEventListener("meugerente_local_event", handleLocalEvent);
     };
   }, [audioEnabled]);
 
+  // Cardápio Unificado (Fichas Técnicas cadastradas têm prioridade sobre itens padrão)
+  const unifiedMenu = [
+    ...customMenu,
+    ...DEFAULT_MENU.filter(d => !customMenu.some(c => c.name.toLowerCase().trim() === d.name.toLowerCase().trim()))
+  ];
+
   // Filtro de catálogo
-  const filteredMenu = DEFAULT_MENU.filter(item => {
+  const filteredMenu = unifiedMenu.filter(item => {
     const matchesCategory = selectedCategory === "todos" || item.category === selectedCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -209,10 +265,17 @@ export default function PdvPage() {
       const orderNumber = Math.floor(100 + Math.random() * 900);
       const allAlerts: string[] = [];
 
+      // Identificação final do cliente/mesa
+      let finalCustomerName = customerName.trim() || "Balcão";
+      if (destinationType === "mesa") {
+        const tNum = selectedTableNumber < 10 ? `0${selectedTableNumber}` : `${selectedTableNumber}`;
+        finalCustomerName = `Mesa ${tNum}${customerName ? ' (' + customerName.trim() + ')' : ''}`;
+      }
+
       // 1. Baixa FEFO no estoque
       try {
         for (const item of cart) {
-          const resultAlerts = await processSaleDeduction("tenant-demo", item.name, item.quantity);
+          const resultAlerts = await processSaleDeduction(tenantId, item.name, item.quantity);
           allAlerts.push(...resultAlerts);
         }
       } catch (err) {
@@ -221,19 +284,19 @@ export default function PdvPage() {
 
       // 2. Transação Financeira Híbrida
       await syncEngine.addTransaction({
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         type: "income",
         category: "sales",
         amount: cartTotal,
-        description: `Venda Pedido #${orderNumber} (${orderType === 'local' ? 'Salão' : 'Viagem'}) - ${customerName || 'Balcão'}`,
+        description: `Venda Pedido #${orderNumber} (${orderType === 'local' ? 'Salão' : 'Viagem'}) - ${finalCustomerName}`,
         date: new Date().toISOString()
       });
 
-      // 3. Salvar Pedido Híbrido (Local + Nuvem)
+      // 3. Salvar Pedido Híbrido (Local + Nuvem) para a Cozinha
       await syncEngine.createOrder({
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         order_number: orderNumber,
-        customer_name: customerName || "Balcão",
+        customer_name: finalCustomerName,
         order_type: orderType,
         payment_method: paymentMethod,
         items: cart.map(i => ({
@@ -249,6 +312,36 @@ export default function PdvPage() {
         is_fast_track: isFast,
         created_at: new Date().toISOString()
       });
+
+      // 4. Se vinculado a uma mesa fixa, sincroniza com o módulo de mesas
+      if (destinationType === "mesa") {
+        try {
+          const tableId = `${tenantId}_mesa-${selectedTableNumber}`;
+          const existingTable = tablesList.find(t => t.number === selectedTableNumber);
+          const newItems = cart.map(i => ({
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity,
+            category: i.category,
+            notes: i.notes || "",
+            sentToKitchen: true,
+            addedAt: new Date().toISOString()
+          }));
+          const currentItems = (existingTable as any)?.items || [];
+          const updatedTableItems = [...currentItems, ...newItems];
+          const newTotal = updatedTableItems.reduce((s: number, it: any) => s + (it.price * it.quantity), 0);
+
+          await updateDoc(doc(db, "tables", tableId), {
+            status: "ocupada",
+            customerName: customerName.trim() || "Cliente Salão",
+            items: updatedTableItems,
+            totalAmount: newTotal
+          });
+        } catch (err) {
+          console.warn("Erro ao vincular mesa:", err);
+        }
+      }
 
       setSuccessOrder(`Pedido #${orderNumber} despachado! Previsão: ~${estimatedPrepMinutes} min.`);
       setAlerts(allAlerts);
@@ -484,15 +577,68 @@ export default function PdvPage() {
               </div>
             )}
 
-            {/* Identificação do Cliente */}
+            {/* Destino: Balcão ou Mesa Fixa */}
             <div className="space-y-3 mb-4">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">Nome / Identificação</label>
+                <label className="block text-[11px] font-bold text-muted-foreground uppercase mb-1.5">Destino do Atendimento</label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationType("balcao");
+                      setOrderType("local");
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                      destinationType === "balcao" 
+                        ? "bg-primary text-white border-primary shadow-sm" 
+                        : "bg-card border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <ShoppingCart size={13} /> Balcão / Retirada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationType("mesa");
+                      setOrderType("local");
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                      destinationType === "mesa" 
+                        ? "bg-primary text-white border-primary shadow-sm" 
+                        : "bg-card border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <UtensilsCrossed size={13} /> Mesa Fixa
+                  </button>
+                </div>
+
+                {destinationType === "mesa" && (
+                  <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/20 mb-2 animate-in fade-in duration-200">
+                    <label className="block text-[10px] font-bold text-primary uppercase mb-1">Selecione a Mesa</label>
+                    <select
+                      value={selectedTableNumber}
+                      onChange={e => setSelectedTableNumber(Number(e.target.value))}
+                      className="w-full bg-card border border-border rounded-lg p-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                    >
+                      {(tablesList.length > 0 ? tablesList : Array.from({ length: 10 }, (_, i) => ({ number: i + 1, name: `Mesa ${i < 9 ? '0' + (i+1) : i+1}`, status: "livre" }))).map(t => (
+                        <option key={t.number} value={t.number}>
+                          {t.name} {t.status === "ocupada" ? " (Ocupada)" : " (Livre)"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground mb-1">
+                  {destinationType === "mesa" ? "Nome do Cliente na Mesa (Opcional)" : "Nome do Cliente"}
+                </label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 text-muted-foreground" size={15} />
                   <input 
                     type="text" 
-                    placeholder="Ex: Carlos ou Mesa 05" 
+                    placeholder={destinationType === "mesa" ? "Ex: Família Silva" : "Ex: Carlos Balcão"} 
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
                     className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary shadow-sm"
@@ -500,30 +646,32 @@ export default function PdvPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOrderType("local")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
-                    orderType === "local" 
-                      ? "bg-primary text-white border-primary shadow-md shadow-primary/25" 
-                      : "bg-card border-border text-muted-foreground"
-                  }`}
-                >
-                  🍔 Comer no Local
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderType("viagem")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
-                    orderType === "viagem" 
-                      ? "bg-primary text-white border-primary shadow-md shadow-primary/25" 
-                      : "bg-card border-border text-muted-foreground"
-                  }`}
-                >
-                  🛍️ Para Viagem
-                </button>
-              </div>
+              {destinationType === "balcao" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("local")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      orderType === "local" 
+                        ? "bg-primary text-white border-primary shadow-md shadow-primary/25" 
+                        : "bg-card border-border text-muted-foreground"
+                    }`}
+                  >
+                    🍔 Comer no Local
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("viagem")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      orderType === "viagem" 
+                        ? "bg-primary text-white border-primary shadow-md shadow-primary/25" 
+                        : "bg-card border-border text-muted-foreground"
+                    }`}
+                  >
+                    🛍️ Para Viagem
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Lista do Carrinho */}

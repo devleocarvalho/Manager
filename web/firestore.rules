@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNÇÕES DE SEGURANÇA (DEVSECOPS / BLUE TEAM)
+    // ==========================================
+
+    // Verifica se a requisição é de um usuário devidamente autenticado
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Valida se o usuário autenticado é o dono do registro do tenant
+    function isTenantOwner(tenantId) {
+      return isAuthenticated() && request.auth.uid == tenantId;
+    }
+
+    // Garante isolamento estrito de dados por tenant (Prevenção contra BOLA / IDOR)
+    // 1. Na leitura (get/list): só lê se o documento pertencer ao tenant_id do usuário
+    // 2. Na criação: o campo tenant_id deve ser obrigatoriamente igual ao uid do usuário
+    // 3. Na atualização: não permite alterar o dono do tenant e exige que pertença ao usuário
+    function belongsToTenant() {
+      return isAuthenticated() && 
+        (resource == null || resource.data.tenant_id == request.auth.uid) && 
+        (request.resource == null || request.resource.data.tenant_id == request.auth.uid);
+    }
+
+    // ==========================================
+    // REGRAS POR COLEÇÃO DO MANAGER SAAS
+    // ==========================================
+
+    // Perfil do Usuário
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Informações do Assinante / Tenant (Plano, Período de Teste, CNPJ/Nome Fantasia)
+    match /tenants/{tenantId} {
+      allow read: if isTenantOwner(tenantId);
+      allow write: if isTenantOwner(tenantId);
+    }
+
+    // Pedidos do PDV e Cozinha (Orders)
+    match /orders/{orderId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Gestão de Mesas e Comandas (Tables)
+    match /tables/{tableId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Itens de Estoque e Lotes (Inventory)
+    match /inventory_items/{itemId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Transações Financeiras e Fluxo de Caixa (Financeiro DRE)
+    match /financial_transactions/{transId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Fichas Técnicas de Produtos e Composições
+    match /technical_sheets/{sheetId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Itens do Cardápio (Menu Items)
+    match /menu_items/{itemId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Bloqueio padrão para qualquer outra coleção não autorizada explicitamente (Princípio do Menor Privilégio)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

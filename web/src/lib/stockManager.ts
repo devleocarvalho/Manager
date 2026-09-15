@@ -1,87 +1,134 @@
-import { collection, query, where, getDocs, updateDoc, doc, addDoc, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
 
-// Tipo para a Ficha Técnica
 export interface TechnicalSheetItem {
-  ingredientId: string; // ID do ingrediente ou nome base
+  ingredientId: string;
   ingredientName: string;
   quantityNeeded: number;
+  unit?: string;
+  unitCost?: number;
 }
 
 export interface TechnicalSheet {
   id?: string;
   menuItemId: string;
   menuItemName: string;
+  category?: string;
+  salePrice?: number;
+  estimatedPrepMinutes?: number;
+  estimatedCost?: number;
   items: TechnicalSheetItem[];
 }
 
+/**
+ * Realiza a dedução inteligente de estoque (FEFO - Primeiro que vence é o primeiro que sai)
+ * 1. Primeiro verifica se o produto vendido possui uma Ficha Técnica (composição de insumos)
+ * 2. Se não possuir ficha técnica, tenta deduzir diretamente o item unitário do estoque (ex: latas, sucos)
+ */
 export async function processSaleDeduction(tenantId: string, menuItemName: string, quantitySold: number) {
   const alerts: string[] = [];
 
-  // 1. Buscar a Ficha Técnica do Produto
-  const sheetQuery = query(
-    collection(db, "technical_sheets"),
-    where("tenant_id", "==", tenantId),
-    where("menuItemName", "==", menuItemName)
-  );
-  const sheetSnap = await getDocs(sheetQuery);
+  try {
+    // 1. Buscar a Ficha Técnica do Produto
+    const sheetQuery = query(
+      collection(db, "technical_sheets"),
+      where("tenant_id", "==", tenantId),
+      where("menuItemName", "==", menuItemName)
+    );
+    const sheetSnap = await getDocs(sheetQuery);
 
-  if (sheetSnap.empty) {
-    alerts.push(`⚠️ Ficha técnica não encontrada para: ${menuItemName}. Estoque não foi descontado.`);
-    return alerts;
-  }
+    if (!sheetSnap.empty) {
+      const sheet = sheetSnap.docs[0].data() as TechnicalSheet;
 
-  const sheet = sheetSnap.docs[0].data() as TechnicalSheet;
+      // Dedução de cada insumo da Ficha Técnica via FEFO
+      for (const item of sheet.items) {
+        const totalNeeded = Number(item.quantityNeeded) * quantitySold;
+        let remainingToDeduct = totalNeeded;
 
-  // 2. Para cada ingrediente na ficha técnica, encontrar lotes e dar baixa FEFO
-  for (const item of sheet.items) {
-    const totalNeeded = item.quantityNeeded * quantitySold;
-    let remainingToDeduct = totalNeeded;
+        // Buscar lotes do insumo ordenados por dias para vencer (FEFO)
+        const invQuery = query(
+          collection(db, "inventory_items"),
+          where("tenant_id", "==", tenantId),
+          orderBy("days_to_expire", "asc")
+        );
 
-    // Buscar lotes do ingrediente no estoque, ordenados pela validade (FEFO)
-    const invQuery = query(
+        const invSnap = await getDocs(invQuery);
+        // Filtro flexível por nome (case-insensitive)
+        const matchingDocs = invSnap.docs.filter(d => 
+          (d.data().name || "").toLowerCase().trim() === item.ingredientName.toLowerCase().trim()
+        );
+
+        if (matchingDocs.length === 0) {
+          alerts.push(`🚨 Falta de estoque crítico: ${item.ingredientName} não encontrado no estoque.`);
+          continue;
+        }
+
+        for (const invDoc of matchingDocs) {
+          if (remainingToDeduct <= 0) break;
+
+          const invData = invDoc.data();
+          const currentQty = Number(invData.quantity) || 0;
+
+          if (currentQty <= 0) continue;
+
+          const deductAmount = Math.min(currentQty, remainingToDeduct);
+          const newQty = Number((currentQty - deductAmount).toFixed(3));
+          remainingToDeduct -= deductAmount;
+
+          await updateDoc(doc(db, "inventory_items", invDoc.id), {
+            quantity: newQty
+          });
+
+          alerts.push(`✅ Usado ${deductAmount} ${item.unit || 'un'} de ${item.ingredientName} (Lote #${invData.lote || 'N/A'}).`);
+        }
+
+        if (remainingToDeduct > 0) {
+          alerts.push(`🚨 Estoque insuficiente para ${item.ingredientName}. Faltou baixar ${remainingToDeduct} ${item.unit || 'un'}.`);
+        }
+      }
+
+      return alerts;
+    }
+
+    // 2. Se não encontrou ficha técnica, verificar se o produto existe diretamente no estoque (ex: Bebida, Sobremesa)
+    const directInvQuery = query(
       collection(db, "inventory_items"),
       where("tenant_id", "==", tenantId),
-      where("name", "==", item.ingredientName),
       orderBy("days_to_expire", "asc")
     );
+    const directSnap = await getDocs(directInvQuery);
+    const directMatches = directSnap.docs.filter(d => 
+      (d.data().name || "").toLowerCase().trim() === menuItemName.toLowerCase().trim()
+    );
 
-    const invSnap = await getDocs(invQuery);
+    if (directMatches.length > 0) {
+      let remainingDirect = quantitySold;
+      for (const invDoc of directMatches) {
+        if (remainingDirect <= 0) break;
 
-    if (invSnap.empty) {
-      alerts.push(`🚨 Falta de estoque crítico: ${item.ingredientName} não encontrado no estoque.`);
-      continue;
+        const invData = invDoc.data();
+        const currentQty = Number(invData.quantity) || 0;
+        if (currentQty <= 0) continue;
+
+        const deductAmount = Math.min(currentQty, remainingDirect);
+        const newQty = currentQty - deductAmount;
+        remainingDirect -= deductAmount;
+
+        await updateDoc(doc(db, "inventory_items", invDoc.id), {
+          quantity: newQty
+        });
+
+        alerts.push(`✅ Baixa direta: ${deductAmount} un de ${menuItemName} (Lote #${invData.lote || 'N/A'}).`);
+      }
+      return alerts;
     }
 
-    for (const invDoc of invSnap.docs) {
-      if (remainingToDeduct <= 0) break;
+    alerts.push(`ℹ️ Produto "${menuItemName}" não tem ficha técnica nem lote cadastrado no estoque.`);
+    return alerts;
 
-      const invData = invDoc.data();
-      const currentQty = Number(invData.quantity); // Assumindo que quantity está em número, ou tem que fazer parse se tiver "kg" ou "g"
-
-      if (currentQty <= 0) continue;
-
-      const deductAmount = Math.min(currentQty, remainingToDeduct);
-      const newQty = currentQty - deductAmount;
-      remainingToDeduct -= deductAmount;
-
-      // Atualizar o banco
-      await updateDoc(doc(db, "inventory_items", invDoc.id), {
-        quantity: newQty
-      });
-
-      // Gerar alerta com localizador
-      alerts.push(`✅ Usado ${deductAmount} de ${item.ingredientName} do Lote #${invData.lote}. Onde achar: ${invData.locator || 'Não especificado'}.`);
-    }
-
-    if (remainingToDeduct > 0) {
-      alerts.push(`🚨 Estoque insuficiente para ${item.ingredientName}. Faltou baixar ${remainingToDeduct}.`);
-    }
+  } catch (error) {
+    console.error("Erro na dedução de estoque:", error);
+    alerts.push(`⚠️ Falha ao atualizar estoque de ${menuItemName}.`);
+    return alerts;
   }
-
-  // Gravar a transação financeira da venda para refletir no Dashboard
-  // Simulando que o preço seria repassado aqui, mas vamos apenas logar um evento de venda se quisermos.
-  // ...
-
-  return alerts;
 }

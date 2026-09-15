@@ -77,16 +77,20 @@ const INGREDIENT_MAP: Record<string, Array<{ name: string; qtyPerItem: number; u
 };
 
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { useAuth } from "../../context/AuthContext";
 
 export default function RelatoriosPage() {
+  const { tenantId } = useAuth();
   const [timeframe, setTimeframe] = useState<"hoje" | "mes" | "ano" | "todos">("hoje");
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!tenantId) return;
+
     const q = query(
       collection(db, "orders"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -99,7 +103,7 @@ export default function RelatoriosPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   // Filtragem por período
   const filteredOrders = orders.filter(order => {

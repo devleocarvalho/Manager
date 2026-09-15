@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useAuth } from "../context/AuthContext";
 import { 
   parseNFeXML, 
   buildSampleInvoiceResult, 
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
+  const { tenantId } = useAuth();
   const [tab, setTab] = useState<"simulator" | "xml" | "qrcode">("simulator");
   const [processedData, setProcessedData] = useState<ProcessedInvoiceResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -149,14 +151,14 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
 
   // Gravação em lote no Firestore
   const handleConfirmImport = async () => {
-    if (!processedData) return;
+    if (!processedData || !tenantId) return;
     setSavingToDatabase(true);
 
     try {
       // 1. Cadastrar os insumos no estoque (Coleção inventory_items)
       for (const item of processedData.items) {
         await addDoc(collection(db, "inventory_items"), {
-          tenant_id: "tenant-demo",
+          tenant_id: tenantId,
           name: item.normalizedName,
           lote: `NF-${Math.floor(1000 + Math.random() * 9000)}`,
           quantity: item.quantity,
@@ -175,7 +177,7 @@ export function InvoiceScannerModal({ isOpen, onClose, onSuccess }: Props) {
 
       // 2. Lançamento Automático de CMV no Financeiro
       await addDoc(collection(db, "financial_transactions"), {
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         type: "expense",
         category: "cmv",
         amount: processedData.totalInvoiceAmount,

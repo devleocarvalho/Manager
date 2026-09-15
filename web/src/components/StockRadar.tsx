@@ -3,16 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useAuth } from "../context/AuthContext";
 import { AlertTriangle, Clock, CheckCircle2, MapPin } from "lucide-react";
 
 export function StockRadar() {
+  const { tenantId } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!tenantId) return;
+
     const q = query(
       collection(db, "inventory_items"),
-      where("tenant_id", "==", "tenant-demo")
+      where("tenant_id", "==", tenantId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -27,7 +31,7 @@ export function StockRadar() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [tenantId]);
 
   if (loading) {
     return (

@@ -9,8 +9,10 @@ import { InvoiceScannerModal } from "../../components/InvoiceScannerModal";
 import { Package, Plus, QrCode, Sparkles } from "lucide-react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useAuth } from "../../context/AuthContext";
 
 export default function EstoquePage() {
+  const { tenantId } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -31,7 +33,7 @@ export default function EstoquePage() {
       const totalCost = Number(formData.quantity) * Number(formData.cost_price);
 
       await addDoc(collection(db, "inventory_items"), {
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         name: formData.name,
         lote: formData.lote,
         quantity: Number(formData.quantity),
@@ -49,7 +51,7 @@ export default function EstoquePage() {
 
       // Lançamento Automático no Financeiro (CMV)
       await addDoc(collection(db, "financial_transactions"), {
-        tenant_id: "tenant-demo",
+        tenant_id: tenantId,
         type: "expense",
         category: "cmv",
         amount: totalCost,
