@@ -20,7 +20,9 @@ interface AuthContextType {
   subscription: SubscriptionInfo;
   currency: CurrencyCode;
   loading: boolean;
+  isDemoMode: boolean;
   login: (email: string, pass: string) => Promise<void>;
+  loginAsDemo: () => Promise<void>;
   register: (email: string, pass: string, businessName: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -35,21 +37,23 @@ const DEFAULT_SETTINGS: TenantSettings = {
 };
 
 const DEFAULT_SUBSCRIPTION: SubscriptionInfo = {
-  status: "trial",
-  plan: "trial",
+  status: "active",
+  plan: "pro",
   createdAt: new Date().toISOString(),
-  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  daysRemaining: 7
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  daysRemaining: 30
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  tenantId: "tenant-demo",
+  tenantId: "demo-tenant",
   tenantProfile: null,
   subscription: DEFAULT_SUBSCRIPTION,
   currency: "EUR",
   loading: true,
+  isDemoMode: false,
   login: async () => {},
+  loginAsDemo: async () => {},
   register: async () => {},
   logout: async () => {},
   resetPassword: async () => {}
@@ -59,12 +63,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
+    // Verifica se já estava em modo demonstração local
+    if (typeof window !== "undefined" && localStorage.getItem("meugerente_demo_mode") === "true") {
+      setIsDemoMode(true);
+      setTenantProfile({
+        tenantId: "demo-tenant",
+        businessName: "Restaurante Lisboa Demo",
+        ownerEmail: "demo@meugerente.com",
+        ownerUid: "demo-tenant",
+        subscription: DEFAULT_SUBSCRIPTION,
+        settings: DEFAULT_SETTINGS
+      });
+      setLoading(false);
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, async (currUser) => {
       setUser(currUser);
 
       if (currUser) {
+        setIsDemoMode(false);
         try {
           const tenantRef = doc(db, "tenants", currUser.uid);
           const snap = await getDoc(tenantRef);
@@ -99,7 +120,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, pass: string) => {
     setLoading(true);
     try {
+      localStorage.removeItem("meugerente_demo_mode");
+      setIsDemoMode(false);
       await signInWithEmailAndPassword(auth, email, pass);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAsDemo = async () => {
+    setLoading(true);
+    try {
+      // Tenta login com a conta demo no Firebase Auth
+      await signInWithEmailAndPassword(auth, "demo@meugerente.com", "demo123456");
+      setIsDemoMode(false);
+    } catch (err: any) {
+      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
+        try {
+          // Se não existir, tenta registrar no Firebase Auth
+          const cred = await createUserWithEmailAndPassword(auth, "demo@meugerente.com", "demo123456");
+          const tenantRef = doc(db, "tenants", cred.user.uid);
+          const initial: TenantProfile = {
+            tenantId: cred.user.uid,
+            businessName: "Restaurante Lisboa Demo",
+            ownerEmail: "demo@meugerente.com",
+            ownerUid: cred.user.uid,
+            subscription: DEFAULT_SUBSCRIPTION,
+            settings: DEFAULT_SETTINGS
+          };
+          await setDoc(tenantRef, initial);
+          setTenantProfile(initial);
+          setIsDemoMode(false);
+          return;
+        } catch (regErr) {
+          console.warn("Falha ao registrar demo no Firebase:", regErr);
+        }
+      }
+      // Se Firebase Auth não responder ou falhar, ativa modo demo instantâneo localmente
+      if (typeof window !== "undefined") {
+        localStorage.setItem("meugerente_demo_mode", "true");
+      }
+      setIsDemoMode(true);
+      setTenantProfile({
+        tenantId: "demo-tenant",
+        businessName: "Restaurante Lisboa Demo",
+        ownerEmail: "demo@meugerente.com",
+        ownerUid: "demo-tenant",
+        subscription: DEFAULT_SUBSCRIPTION,
+        settings: DEFAULT_SETTINGS
+      });
     } finally {
       setLoading(false);
     }
@@ -108,6 +177,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, pass: string, businessName: string) => {
     setLoading(true);
     try {
+      localStorage.removeItem("meugerente_demo_mode");
+      setIsDemoMode(false);
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       const newTenant: TenantProfile = {
         tenantId: cred.user.uid,
@@ -125,7 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await firebaseSignOut(auth);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("meugerente_demo_mode");
+    }
+    setIsDemoMode(false);
+    await firebaseSignOut(auth).catch(() => {});
     setUser(null);
     setTenantProfile(null);
   };
@@ -134,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const activeTenantId = user ? user.uid : (tenantProfile?.tenantId || "tenant-demo");
+  const activeTenantId = user ? user.uid : (tenantProfile?.tenantId || "demo-tenant");
   const activeCurrency: CurrencyCode = tenantProfile?.settings?.currency || "EUR";
 
   return (
@@ -146,7 +221,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription: tenantProfile?.subscription || DEFAULT_SUBSCRIPTION,
         currency: activeCurrency,
         loading,
+        isDemoMode,
         login,
+        loginAsDemo,
         register,
         logout,
         resetPassword

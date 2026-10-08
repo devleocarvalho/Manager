@@ -13,9 +13,23 @@ export default function LoginPage() {
   const [businessName, setBusinessName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
-  const { login, register, resetPassword } = useAuth();
+  const { login, register, loginAsDemo, resetPassword } = useAuth();
   const router = useRouter();
+
+  const handleDemoAccess = async () => {
+    setErrorMsg("");
+    setDemoLoading(true);
+    try {
+      await loginAsDemo();
+      router.push("/");
+    } catch (err: any) {
+      setErrorMsg("Erro ao iniciar demonstração: " + (err.message || "Tente novamente"));
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +89,23 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Botão de Destaque Demo */}
+          <button
+            type="button"
+            onClick={handleDemoAccess}
+            disabled={demoLoading}
+            className="w-full mb-6 py-3.5 bg-gradient-to-r from-primary to-emerald-500 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:opacity-95 transition-all text-sm"
+          >
+            <Sparkles size={18} />
+            {demoLoading ? "A iniciar demonstração..." : "Entrar em Modo Demonstração (1 Clique)"}
+          </button>
+
+          <div className="relative flex py-2 items-center mb-6">
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink mx-4 text-[10px] text-muted-foreground uppercase font-bold tracking-wider">ou utilize a sua conta</span>
+            <div className="flex-grow border-t border-border"></div>
+          </div>
+
           <div className="grid grid-cols-2 p-1 bg-black/5 dark:bg-white/5 rounded-2xl border border-border mb-6">
             <button
               type="button"
@@ -131,7 +162,7 @@ export default function LoginPage() {
                 <input
                   required
                   type="email"
-                  placeholder="gerente@restaurante.com"
+                  placeholder="gerencia@seurestaurante.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl p-3 pl-9 text-xs text-foreground focus:outline-none focus:border-primary font-medium"
@@ -148,7 +179,7 @@ export default function LoginPage() {
                 <input
                   required
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl p-3 pl-9 text-xs text-foreground focus:outline-none focus:border-primary font-medium"
@@ -160,24 +191,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-primary text-white rounded-xl font-black text-xs shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+              className="w-full py-3 bg-card border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs mt-2"
             >
-              {loading ? "A processar..." : isRegister ? (
-                <>
-                  <Sparkles size={16} /> Começar Teste de 7 Dias
-                </>
-              ) : (
-                <>
-                  Entrar no Manager <ArrowRight size={16} />
-                </>
-              )}
+              {loading ? "A processar..." : isRegister ? "Criar Novo Estabelecimento" : "Entrar com E-mail"}
+              <ArrowRight size={15} />
             </button>
           </form>
         </div>
       </div>
 
-      <div className="text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Manager Restaurant OS - Gestão Gastronómica Europeia
+      <div className="text-center text-[11px] text-muted-foreground max-w-md mx-auto">
+        Manager Restaurant OS &copy; {new Date().getFullYear()} — Plataforma certificada para restauração e hotelaria europeia.
       </div>
     </div>
   );
