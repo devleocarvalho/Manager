@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNÇÕES DE SEGURANÇA (DEVSECOPS / BLUE TEAM)
+    // ==========================================
+
+    // Verifica se a requisição é de um usuário devidamente autenticado
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Valida se o usuário autenticado é o dono do registro do tenant
+    function isTenantOwner(tenantId) {
+      return isAuthenticated() && request.auth.uid == tenantId;
+    }
+
+    // Garante isolamento estrito de dados por tenant para o painel administrativo
+    function belongsToTenant() {
+      return isAuthenticated() && 
+        (resource == null || resource.data.tenant_id == request.auth.uid) && 
+        (request.resource == null || request.resource.data.tenant_id == request.auth.uid);
+    }
+
+    // ==========================================
+    // REGRAS POR COLEÇÃO DO MANAGER SAAS
+    // ==========================================
+
+    // Perfil do Usuário (Privado)
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Informações do Assinante / Tenant (Nome Fantasia e Moeda públicos para o cardápio)
+    match /tenants/{tenantId} {
+      allow read: if true;
+      allow write: if isTenantOwner(tenantId);
+    }
+
+    // Pedidos do PDV, Cozinha e QR Code da Mesa (Orders)
+    match /orders/{orderId} {
+      allow read: if belongsToTenant();
+      // Permite o painel criar ou clientes na mesa via QR Code enviarem pedidos
+      allow create: if belongsToTenant() || (request.resource.data.tenant_id != null);
+      allow update, delete: if belongsToTenant();
+    }
+
+    // Gestão de Mesas e Comandas (Tables)
+    match /tables/{tableId} {
+      // Garçom e clientes na mesa leem e atualizam a comanda/chamado de garçom
+      allow read: if true;
+      allow write: if belongsToTenant() || (request.resource.data.tenant_id != null);
+    }
+
+    // Fichas Técnicas e Cardápio (Público para leitura pelo QR Code do cliente)
+    match /technical_sheets/{sheetId} {
+      allow read: if true;
+      allow write: if belongsToTenant();
+    }
+
+    // Itens do Cardápio (Menu Items)
+    match /menu_items/{itemId} {
+      allow read: if true;
+      allow write: if belongsToTenant();
+    }
+
+    // Itens de Estoque e Lotes (Inventory) - ESTRITAMENTE PRIVADO
+    match /inventory_items/{itemId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Transações Financeiras e Fluxo de Caixa (Financeiro DRE) - ESTRITAMENTE PRIVADO
+    match /financial_transactions/{transId} {
+      allow read, write: if belongsToTenant();
+    }
+
+    // Bloqueio padrão para qualquer outra coleção não autorizada explicitamente
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
