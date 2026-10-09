@@ -60,7 +60,7 @@ export function QrCodeModal({
         <div className="p-6 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 print:grid-cols-2 print:gap-4">
             {tables.map(table => {
-              const url = `${baseUrl}/cardapio/${tenantId}?mesa=${table.number}`;
+              const url = `${baseUrl}/cardapio?tenant=${tenantId}&mesa=${table.number}`;
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}&color=0f172a`;
 
               return (

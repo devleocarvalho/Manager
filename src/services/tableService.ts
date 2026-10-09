@@ -5,7 +5,8 @@ import {
   where, 
   doc, 
   setDoc, 
-  updateDoc 
+  updateDoc,
+  getDoc 
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { TableItem, ComandaItem, MenuItem, CourseStage, MarchingStatus } from "../domain/types";
@@ -166,6 +167,35 @@ export const tableService = {
       status: "chamando_garcom",
       waiterCalledAt: new Date().toISOString()
     });
+  },
+
+  async addItemsFromQrCode(
+    tenantId: string,
+    tableNumber: number,
+    newItems: ComandaItem[],
+    customerName = ""
+  ) {
+    const tableId = `${tenantId}_mesa-${tableNumber}`;
+    const tableRef = doc(db, "tables", tableId);
+    const snap = await getDoc(tableRef);
+    if (!snap.exists()) return;
+    
+    const tableData = snap.data() as TableItem;
+    const currentItems = tableData.items || [];
+    const updatedItems = [...currentItems, ...newItems];
+    const newTotal = updatedItems.reduce((s, i) => s + (i.price * i.quantity), 0);
+
+    const updateData: any = {
+      items: updatedItems,
+      totalAmount: newTotal,
+      status: tableData.status === "livre" ? "ocupada" : tableData.status
+    };
+    if (tableData.status === "livre" || !tableData.customerName) {
+      updateData.customerName = customerName || `Mesa ${tableNumber}`;
+      updateData.openedAt = tableData.openedAt || new Date().toISOString();
+    }
+
+    await updateDoc(tableRef, updateData);
   },
 
   async sendToKitchen(tenantId: string, table: TableItem) {

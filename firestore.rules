@@ -75,6 +75,11 @@ service cloud.firestore {
       allow read, write: if belongsToTenant();
     }
 
+    // Turnos e Arqueo de Caixa (PDV Cash Shifts) - ESTRITAMENTE PRIVADO
+    match /cash_shifts/{shiftId} {
+      allow read, write: if belongsToTenant();
+    }
+
     // Bloqueio padrão para qualquer outra coleção não autorizada explicitamente
     match /{document=**} {
       allow read, write: if false;
