@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Clock, Play, Bell, Check, Flame, Zap, AlertCircle } from "lucide-react";
+import { Clock, Play, Bell, Check, Flame, Zap, AlertCircle, MapPin, Phone, Bike, ShoppingBag, Store } from "lucide-react";
 import { Order, OrderStatus } from "../../domain/types";
 
 interface OrderCardProps {
@@ -14,6 +14,21 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
   const estMinutes = order.estimated_minutes || 8;
   const isOverdue = elapsedMinutes >= estMinutes;
 
+  const getOrderTypeBadge = () => {
+    switch (order.order_type) {
+      case "delivery":
+        return <span className="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1"><Bike size={11} /> Delivery</span>;
+      case "takeaway":
+      case "viagem":
+        return <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1"><ShoppingBag size={11} /> Takeaway</span>;
+      case "qrcode_mesa":
+        return <span className="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase">📱 QR Mesa {order.table_number || ""}</span>;
+      case "local":
+      default:
+        return <span className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1"><Store size={11} /> Salão {order.table_number ? `M${order.table_number}` : ""}</span>;
+    }
+  };
+
   return (
     <div className={`bg-card rounded-2xl p-5 border shadow-lg transition-all ${
       isOverdue 
@@ -25,22 +40,40 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
       {/* Topo do Card */}
       <div className="flex justify-between items-start pb-3 border-b border-border">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xl font-black text-foreground">#{order.order_number}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${
-              order.order_type === "qrcode_mesa"
-                ? "bg-primary text-white"
-                : "bg-black/10 dark:bg-white/10 text-foreground"
-            }`}>
-              {order.order_type === "qrcode_mesa" ? "📱 QR Code" : "🍔 Salão"}
-            </span>
+            {getOrderTypeBadge()}
+            {order.pacing_priority === "prioridade_salao" && (
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                ⚡ Prioridade Salão
+              </span>
+            )}
+            {order.pacing_priority === "padrao_delivery" && (
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500">
+                ⏱️ Slot Delivery
+              </span>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate max-w-[170px]">
+          <p className="text-xs text-foreground mt-1 font-bold truncate max-w-[200px]">
             {order.customer_name}
           </p>
+
+          {/* Dados de Entrega se houver */}
+          {order.order_type === "delivery" && order.delivery_address && (
+            <div className="mt-1.5 p-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[10px] text-foreground font-semibold space-y-0.5">
+              <div className="flex items-center gap-1 text-blue-500 truncate">
+                <MapPin size={10} className="shrink-0" /> {order.delivery_address}
+              </div>
+              {order.delivery_phone && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Phone size={10} className="shrink-0" /> {order.delivery_phone}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg ${
+        <div className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg shrink-0 ${
           isOverdue ? "bg-destructive text-white animate-pulse" : "bg-black/10 dark:bg-white/10 text-foreground"
         }`}>
           <Clock size={12} />

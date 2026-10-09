@@ -20,16 +20,29 @@ export const tableService = {
     const q = query(collection(db, "tables"), where("tenant_id", "==", tenantId));
     return onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
-        // Inicializa 10 mesas padrão
+        // Inicializa 24 mesas distribuídas por setores (Salão, Esplanada, Balcão)
         const initialTables: TableItem[] = [];
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 24; i++) {
           const tableDocId = `${tenantId}_mesa-${i}`;
+          let area = "Salão";
+          let cap = 4;
+          if (i > 12 && i <= 20) {
+            area = "Esplanada";
+            cap = (i % 2 === 0) ? 4 : 2;
+          } else if (i > 20) {
+            area = "Balcão";
+            cap = 2;
+          } else {
+            cap = (i <= 4) ? 2 : (i <= 10) ? 4 : 6;
+          }
+
           const t: TableItem = {
             id: tableDocId,
             number: i,
-            name: `Mesa ${i < 10 ? '0' + i : i}`,
-            capacity: 4,
+            name: `${area === "Balcão" ? "Lugar" : "Mesa"} ${i < 10 ? '0' + i : i}`,
+            capacity: cap,
             status: "livre",
+            area,
             items: [],
             totalAmount: 0
           };
@@ -45,7 +58,7 @@ export const tableService = {
     });
   },
 
-  async createTable(tenantId: string, number: number, name: string, capacity: number) {
+  async createTable(tenantId: string, number: number, name: string, capacity: number, area = "Salão") {
     const tableId = `${tenantId}_mesa-${number}`;
     await setDoc(doc(db, "tables", tableId), {
       tenant_id: tenantId,
@@ -54,9 +67,17 @@ export const tableService = {
       name: name.trim() || `Mesa ${number < 10 ? '0' + number : number}`,
       capacity: Number(capacity) || 4,
       status: "livre",
+      area,
       items: [],
       totalAmount: 0
     });
+  },
+
+  async addBatchMoreTables(tenantId: string, currentCount: number, countToAdd: number = 6, area = "Salão") {
+    for (let i = 1; i <= countToAdd; i++) {
+      const nextNum = currentCount + i;
+      await this.createTable(tenantId, nextNum, `Mesa ${nextNum < 10 ? '0' + nextNum : nextNum}`, 4, area);
+    }
   },
 
   async openTable(tableId: string, customerName: string, customerPhone = "", customerNif = "") {

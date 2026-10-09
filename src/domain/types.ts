@@ -86,6 +86,7 @@ export interface TableItem {
   name: string;
   capacity: number;
   status: TableStatus;
+  area?: "salao" | "esplanada" | "balcao" | string;
   customerName?: string;
   customerPhone?: string;
   customerNif?: string; // NIF / VAT ID europeu para emissão fiscal
@@ -98,7 +99,7 @@ export interface TableItem {
 }
 
 export type OrderStatus = "pendente" | "preparando" | "pronto" | "entregue";
-export type OrderType = "local" | "viagem" | "qrcode_mesa";
+export type OrderType = "local" | "viagem" | "qrcode_mesa" | "delivery" | "takeaway";
 
 export interface OrderItem {
   name: string;
@@ -123,11 +124,46 @@ export interface Order {
   status: OrderStatus;
   estimated_minutes?: number;
   is_fast_track?: boolean;
+  delivery_address?: string;
+  delivery_phone?: string;
+  delivery_fee?: number;
+  pacing_priority?: "prioridade_salao" | "padrao_delivery" | "takeaway";
   created_at: string;
   started_at?: string;
   completed_at?: string;
   delivered_at?: string;
   waiterName?: string;
+}
+
+// ==========================================
+// TIPOS: ENGENHARIA DE CUSTOS & ESCANDALLO
+// ==========================================
+
+export interface RecipeIngredientCost {
+  ingredientId: string;
+  name: string;
+  purchasePackagePrice: number; // Ex: €20.00
+  purchasePackageQty: number; // Ex: 1.0 (1kg)
+  purchaseUnit: "kg" | "g" | "l" | "ml" | "un";
+  portionQty: number; // Ex: 50 (50g)
+  portionUnit: "g" | "kg" | "ml" | "l" | "un";
+  portionCost: number; // Ex: €1.00
+}
+
+export interface DishCostBreakdown {
+  dishName: string;
+  category: string;
+  ingredients: RecipeIngredientCost[];
+  directFoodCost: number; // CMV Direto dos insumos (€)
+  indirectOverheadPercent: number; // Rateio operacional: luz, gás, equipe (ex: 25%)
+  indirectOverheadCost: number; // Valor do rateio (€)
+  totalProductionCost: number; // Custo Total Base (€)
+  targetVatRate: number; // Taxa de IVA (ex: 13%)
+  breakEvenPrice: number; // Preço Mínimo de Equilíbrio sem prejuízo (€)
+  currentSalePrice: number; // Preço Atual (€)
+  suggestedMarginPercent: number; // Margem Alvo (ex: 65%)
+  suggestedSalePrice: number; // Preço de Venda Otimizado para 65% (€)
+  netProfitUnit: number; // Lucro Líquido Unitário estimado (€)
 }
 
 export interface InventoryItem {

@@ -6,12 +6,22 @@ import { ThemeToggle } from "../../components/common/ThemeToggle";
 import { useAuth } from "../../context/AuthContext";
 import { useKdsOrders } from "../../hooks/useKdsOrders";
 import { OrderCard } from "../../components/kds/OrderCard";
-import { ChefHat, Volume2, VolumeX, Clock, Flame, Bell } from "lucide-react";
+import { ChefHat, Volume2, VolumeX, Clock, Flame, Bell, Scale, Bike, Store, ShieldCheck } from "lucide-react";
 
 export default function CozinhaPage() {
   const { tenantId } = useAuth();
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const { loading, pendentes, preparando, prontos, updateStatus } = useKdsOrders(tenantId, audioEnabled);
+  const { 
+    loading, 
+    pendentes, 
+    preparando, 
+    prontos, 
+    updateStatus, 
+    pacingFilter, 
+    setPacingFilter, 
+    salaoCount, 
+    deliveryCount 
+  } = useKdsOrders(tenantId, audioEnabled);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
@@ -27,7 +37,7 @@ export default function CozinhaPage() {
             <div>
               <h2 className="text-3xl font-black text-foreground tracking-tight">KDS Cozinha & Bar</h2>
               <p className="text-muted-foreground text-xs sm:text-sm mt-0.5">
-                Esteira de produção em tempo real com fila de espera, chapa e prontos.
+                Esteira de produção com algoritmo de Ritmo Justo (Salão presencial vs. Delivery online).
               </p>
             </div>
           </div>
@@ -45,6 +55,59 @@ export default function CozinhaPage() {
             <ThemeToggle />
           </div>
         </header>
+
+        {/* Banner de Equilíbrio / Ritmo Justo (Fair Kitchen Pacing) */}
+        <div className="mb-6 bg-card border border-border p-4 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Scale size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-black uppercase text-foreground">Equilíbrio Cozinha (Salão vs. Delivery)</h4>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <ShieldCheck size={11} /> Algoritmo Ativo
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Ordens escalonadas para que os clientes de mesa não sofram atrasos e o estafeta receba o pedido quente no momento exato.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 w-full md:w-auto">
+            <button
+              onClick={() => setPacingFilter("todos")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                pacingFilter === "todos"
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-black/5 dark:bg-white/5 border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Todos ({salaoCount + deliveryCount})
+            </button>
+            <button
+              onClick={() => setPacingFilter("salao")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                pacingFilter === "salao"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "bg-black/5 dark:bg-white/5 border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Store size={13} /> Salão ({salaoCount})
+            </button>
+            <button
+              onClick={() => setPacingFilter("delivery")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                pacingFilter === "delivery"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-black/5 dark:bg-white/5 border border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Bike size={13} /> Online ({deliveryCount})
+            </button>
+          </div>
+        </div>
 
         {/* Indicadores de Fila */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

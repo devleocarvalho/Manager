@@ -41,8 +41,12 @@ export function useTables(tenantId: string) {
     return await tableService.closeBill(tenantId, table, finalAmount, paymentMethod, vatAmount);
   };
 
-  const createTable = async (num: number, name: string, cap: number) => {
-    return await tableService.createTable(tenantId, num, name, cap);
+  const createTable = async (num: number, name: string, cap: number, area = "Salão") => {
+    return await tableService.createTable(tenantId, num, name, cap, area);
+  };
+
+  const addBatchTables = async (count = 6, area = "Salão") => {
+    return await tableService.addBatchMoreTables(tenantId, tables.length, count, area);
   };
 
   return {
@@ -54,6 +58,7 @@ export function useTables(tenantId: string) {
     removeItem,
     sendToKitchen,
     closeBill,
-    createTable
+    createTable,
+    addBatchTables
   };
 }

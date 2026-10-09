@@ -41,15 +41,22 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
     >
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full ${
-            isCalling
-              ? "bg-destructive text-white"
-              : isOccupied 
-                ? "bg-amber-500 text-white" 
-                : "bg-success/20 text-success"
-          }`}>
-            {isCalling ? "Chamando!" : isOccupied ? "Ocupada" : "Livre"}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full ${
+              isCalling
+                ? "bg-destructive text-white"
+                : isOccupied 
+                  ? "bg-amber-500 text-white" 
+                  : "bg-success/20 text-success"
+            }`}>
+              {isCalling ? "Chamando!" : isOccupied ? "Ocupada" : "Livre"}
+            </span>
+            {table.area && (
+              <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-muted-foreground">
+                {table.area}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-semibold">
             <Users size={12} /> {table.capacity}
           </div>

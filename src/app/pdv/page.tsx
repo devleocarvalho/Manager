@@ -21,9 +21,15 @@ import {
   Banknote, 
   QrCode, 
   CheckCircle2,
-  Wallet
+  Wallet,
+  Bike,
+  ShoppingBag,
+  Store,
+  MapPin,
+  Phone
 } from "lucide-react";
 import { CashShiftModal } from "../../components/pdv/CashShiftModal";
+import { OrderType } from "../../domain/types";
 
 export default function PdvPage() {
   const { tenantId, currency } = useAuth();
@@ -32,6 +38,10 @@ export default function PdvPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState<Array<{ item: MenuItem; quantity: number; notes: string }>>([]);
   const [customerName, setCustomerName] = useState("");
+  const [orderType, setOrderType] = useState<"local" | "delivery" | "takeaway">("local");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState("2.50");
   const [paymentMethod, setPaymentMethod] = useState<"cartao" | "dinheiro" | "digital">("cartao");
   const [amountReceived, setAmountReceived] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -67,8 +77,11 @@ export default function PdvPage() {
   };
 
   const cartTotal = cart.reduce((s, c) => s + (c.item.price * c.quantity), 0);
-  const change = paymentMethod === "dinheiro" && Number(amountReceived) > cartTotal 
-    ? Number(amountReceived) - cartTotal 
+  const deliveryFeeNum = orderType === "delivery" ? (parseFloat(deliveryFee) || 0) : 0;
+  const grandTotal = cartTotal + deliveryFeeNum;
+
+  const change = paymentMethod === "dinheiro" && Number(amountReceived) > grandTotal 
+    ? Number(amountReceived) - grandTotal 
     : 0;
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -79,24 +92,25 @@ export default function PdvPage() {
 
     try {
       const orderNumber = Math.floor(100 + Math.random() * 900);
+      const orderTypeLabel = orderType === "delivery" ? "Delivery" : orderType === "takeaway" ? "Takeaway" : "Balcão";
 
       // 1. Registra no Financeiro
       await financeService.addTransaction({
         tenant_id: tenantId,
         type: "income",
         category: "sales",
-        amount: cartTotal,
-        description: `Venda Balcão #${orderNumber} - ${customerName.trim() || 'Balcão'} (${paymentMethod.toUpperCase()})`,
+        amount: grandTotal,
+        description: `Venda ${orderTypeLabel} #${orderNumber} - ${customerName.trim() || orderTypeLabel} (${paymentMethod.toUpperCase()})`,
         payment_method: paymentMethod,
         date: new Date().toISOString()
       });
 
-      // 2. Envia para a Cozinha
+      // 2. Envia para a Cozinha com Pacing Inteligente
       await orderService.createOrder({
         tenant_id: tenantId,
         order_number: orderNumber,
-        customer_name: customerName.trim() || "Balcão",
-        order_type: "local",
+        customer_name: customerName.trim() || (orderType === "delivery" ? "Cliente Delivery" : orderType === "takeaway" ? "Cliente Takeaway" : "Balcão"),
+        order_type: orderType,
         payment_method: paymentMethod,
         items: cart.map(c => ({
           name: c.item.name,
@@ -105,9 +119,13 @@ export default function PdvPage() {
           price: c.item.price,
           notes: c.notes || ""
         })),
-        total_price: cartTotal,
+        total_price: grandTotal,
         status: "pendente",
-        estimated_minutes: 8,
+        estimated_minutes: orderType === "delivery" ? 25 : orderType === "takeaway" ? 12 : 8,
+        delivery_address: orderType === "delivery" ? deliveryAddress.trim() : undefined,
+        delivery_phone: orderType === "delivery" ? deliveryPhone.trim() : undefined,
+        delivery_fee: orderType === "delivery" ? deliveryFeeNum : undefined,
+        pacing_priority: orderType === "local" ? "prioridade_salao" : orderType === "delivery" ? "padrao_delivery" : "takeaway",
         created_at: new Date().toISOString()
       });
 
@@ -120,9 +138,11 @@ export default function PdvPage() {
         }
       }
 
-      setSuccessMsg(`Pedido #${orderNumber} faturado e despachado para a cozinha!`);
+      setSuccessMsg(`Pedido ${orderTypeLabel} #${orderNumber} faturado e despachado para a esteira da cozinha!`);
       setCart([]);
       setCustomerName("");
+      setDeliveryAddress("");
+      setDeliveryPhone("");
       setAmountReceived("");
     } catch (e) {
       console.error(e);
@@ -217,9 +237,55 @@ export default function PdvPage() {
           {/* Carrinho / Checkout */}
           <div className="w-full xl:w-96 bg-card border border-border rounded-3xl p-5 flex flex-col justify-between h-fit sticky top-6 shadow-sm">
             <div>
-              <h3 className="font-black text-sm mb-3">Comanda de Balcão ({cart.length} itens)</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-black text-sm text-foreground">Comanda ({cart.length} itens)</h3>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                  {orderType === "delivery" ? "🛵 Delivery" : orderType === "takeaway" ? "🥡 Takeaway" : "🍔 Balcão"}
+                </span>
+              </div>
 
-              <div className="mb-3">
+              {/* Seletor de Tipo de Pedido */}
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-black/5 dark:bg-white/5 rounded-2xl border border-border mb-3">
+                <button
+                  type="button"
+                  onClick={() => setOrderType("local")}
+                  className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                    orderType === "local" 
+                      ? "bg-card text-foreground shadow-sm border border-border font-black" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Store size={14} className={orderType === "local" ? "text-primary" : ""} />
+                  <span>Salão/Balcão</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderType("delivery")}
+                  className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                    orderType === "delivery" 
+                      ? "bg-card text-foreground shadow-sm border border-border font-black" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Bike size={14} className={orderType === "delivery" ? "text-blue-500" : ""} />
+                  <span>Delivery</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderType("takeaway")}
+                  className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                    orderType === "takeaway" 
+                      ? "bg-card text-foreground shadow-sm border border-border font-black" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ShoppingBag size={14} className={orderType === "takeaway" ? "text-amber-500" : ""} />
+                  <span>Takeaway</span>
+                </button>
+              </div>
+
+              {/* Dados do Cliente */}
+              <div className="space-y-2 mb-3">
                 <input
                   type="text"
                   placeholder="Nome do cliente (Opcional)"
@@ -227,10 +293,48 @@ export default function PdvPage() {
                   onChange={e => setCustomerName(e.target.value)}
                   className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none"
                 />
+
+                {orderType === "delivery" && (
+                  <div className="space-y-2 p-2.5 bg-blue-500/5 border border-blue-500/20 rounded-2xl animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} className="text-blue-500 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Morada de Entrega (Rua, Nº, Andar)..."
+                        value={deliveryAddress}
+                        onChange={e => setDeliveryAddress(e.target.value)}
+                        className="w-full bg-card border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Phone size={13} className="text-blue-500 shrink-0" />
+                        <input
+                          type="tel"
+                          placeholder="Telefone"
+                          value={deliveryPhone}
+                          onChange={e => setDeliveryPhone(e.target.value)}
+                          className="w-full bg-card border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-muted-foreground">Taxa:</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="Taxa (€)"
+                          value={deliveryFee}
+                          onChange={e => setDeliveryFee(e.target.value)}
+                          className="w-full bg-card border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Itens do carrinho */}
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1 mb-3 divide-y divide-border/60">
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 mb-3 divide-y divide-border/60">
                 {cart.length === 0 ? (
                   <div className="text-center py-6 text-xs text-muted-foreground">Carrinho vazio.</div>
                 ) : (
@@ -295,14 +399,29 @@ export default function PdvPage() {
             </div>
 
             <div className="pt-3 border-t border-border">
-              <div className="flex justify-between items-center mb-3 text-xs">
-                <span className="font-bold text-muted-foreground uppercase">Total:</span>
-                <span className="text-xl font-black">{formatCurrency(cartTotal, currency)}</span>
+              <div className="space-y-1 mb-3 text-xs">
+                {orderType === "delivery" && deliveryFeeNum > 0 && (
+                  <>
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Subtotal Itens:</span>
+                      <span className="font-semibold">{formatCurrency(cartTotal, currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Taxa de Entrega:</span>
+                      <span className="font-semibold text-blue-500">+{formatCurrency(deliveryFeeNum, currency)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between items-center pt-1">
+                  <span className="font-bold text-muted-foreground uppercase">Total Geral:</span>
+                  <span className="text-xl font-black text-foreground">{formatCurrency(grandTotal, currency)}</span>
+                </div>
               </div>
+
               <button
                 onClick={handleCheckout}
                 disabled={loading || cart.length === 0}
-                className="w-full py-3 bg-primary text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                className="w-full py-3 bg-primary text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 shadow-md shadow-primary/20"
               >
                 {loading ? "A processar..." : <><Send size={15} /> Finalizar e Despachar</>}
               </button>

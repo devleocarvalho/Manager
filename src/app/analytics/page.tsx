@@ -18,12 +18,14 @@ import {
   ArrowUpRight, 
   DollarSign, 
   Filter,
-  Layers
+  Layers,
+  Calculator
 } from "lucide-react";
 import { formatCurrency } from "../../lib/currency";
 import { analyticsService } from "../../services/analyticsService";
 import { orderService } from "../../services/orderService";
 import { stockService } from "../../services/stockService";
+import { EscandalloSimulator } from "../../components/analytics/EscandalloSimulator";
 import { 
   Order, 
   InventoryItem, 
@@ -38,6 +40,9 @@ import {
 
 export default function AnalyticsPage() {
   const { tenantId, currency } = useAuth();
+
+  // Tab de Navegação
+  const [activeTab, setActiveTab] = useState<"bi" | "escandallo">("bi");
 
   // Estados dos Filtros Sincronizados
   const [period, setPeriod] = useState<"hoje" | "ontem" | "7dias" | "mes">("hoje");
@@ -179,7 +184,35 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros Sincronizados */}
+      {/* Navegação entre BI e Escandallo Dinâmico */}
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <button
+          onClick={() => setActiveTab("bi")}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+            activeTab === "bi"
+              ? "bg-primary text-white shadow-md shadow-primary/25"
+              : "bg-card border border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <BarChart3 size={15} /> 1. BI & Inteligência de Operação
+        </button>
+        <button
+          onClick={() => setActiveTab("escandallo")}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+            activeTab === "escandallo"
+              ? "bg-amber-500 text-white shadow-md shadow-amber-500/25"
+              : "bg-card border border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Calculator size={15} /> 2. Engenharia de Custos & Escandallo (Margens & Lucro)
+        </button>
+      </div>
+
+      {activeTab === "escandallo" ? (
+        <EscandalloSimulator currency={currency} />
+      ) : (
+        <>
+          {/* Barra de Filtros Sincronizados */}
       <div className="bg-card border border-border rounded-2xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1 mr-2">
@@ -619,6 +652,8 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

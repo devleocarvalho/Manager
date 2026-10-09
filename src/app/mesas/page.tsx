@@ -25,12 +25,15 @@ export default function MesasPage() {
     removeItem, 
     sendToKitchen, 
     closeBill, 
-    createTable 
+    createTable,
+    addBatchTables
   } = useTables(tenantId);
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
   const [filter, setFilter] = useState<"todas" | "livres" | "ocupadas">("todas");
+  const [selectedArea, setSelectedArea] = useState<"todas" | "Salão" | "Esplanada" | "Balcão">("todas");
+  const [batchLoading, setBatchLoading] = useState(false);
 
   // Modais
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -52,13 +55,33 @@ export default function MesasPage() {
   }, [tables]);
 
   const filteredTables = tables.filter(t => {
-    if (filter === "livres") return t.status === "livre";
-    if (filter === "ocupadas") return t.status !== "livre";
-    return true;
+    const matchesStatus = 
+      filter === "livres" ? t.status === "livre" :
+      filter === "ocupadas" ? t.status !== "livre" : true;
+
+    const matchesArea = 
+      selectedArea === "todas" ? true :
+      (t.area?.toLowerCase() === selectedArea.toLowerCase());
+
+    return matchesStatus && matchesArea;
   });
 
   const totalConsumo = tables.reduce((s, t) => s + (t.totalAmount || 0), 0);
   const mesasOcupadas = tables.filter(t => t.status !== "livre").length;
+
+  const handleAddBatch = async () => {
+    if (batchLoading) return;
+    setBatchLoading(true);
+    try {
+      const targetArea = selectedArea === "todas" ? "Salão" : selectedArea;
+      await addBatchTables(6, targetArea);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao adicionar lote de mesas.");
+    } finally {
+      setBatchLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
@@ -74,20 +97,28 @@ export default function MesasPage() {
             <div>
               <h2 className="text-3xl font-black text-foreground tracking-tight">Gestão de Mesas & Salão</h2>
               <p className="text-muted-foreground text-xs sm:text-sm mt-0.5">
-                Atendimento, comandas ativas, envio para a cozinha e fechamento ágil.
+                Atendimento, setores (Salão, Esplanada, Balcão) e escala de capacidade.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={() => setShowQrModal(true)}
               className="px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold flex items-center gap-1.5 transition-all"
             >
-              <QrCode size={16} /> Plaquinhas QR Code
+              <QrCode size={16} /> Plaquinhas QR
             </button>
             <button
-              onClick={() => createTable(tables.length + 1, `Mesa ${tables.length + 1}`, 4)}
+              onClick={handleAddBatch}
+              disabled={batchLoading}
+              className="px-3.5 py-2.5 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black flex items-center gap-1.5 transition-all disabled:opacity-50"
+              title="Adiciona 6 novas mesas no setor atual"
+            >
+              <Plus size={16} /> {batchLoading ? "A criar..." : "+ 6 Mesas (Lote)"}
+            </button>
+            <button
+              onClick={() => createTable(tables.length + 1, `Mesa ${tables.length + 1}`, 4, selectedArea === "todas" ? "Salão" : selectedArea)}
               className="px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-primary/25 hover:bg-primary/90 transition-all active:scale-95"
             >
               <Plus size={16} /> + Nova Mesa
@@ -116,19 +147,40 @@ export default function MesasPage() {
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="flex items-center gap-2 mb-6">
-          {(["todas", "ocupadas", "livres"] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                filter === f ? "bg-primary text-white shadow-sm" : "bg-card border border-border text-muted-foreground"
-              }`}
-            >
-              {f.toUpperCase()}
-            </button>
-          ))}
+        {/* Filtros de Setor e Status */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          {/* Setores */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            <span className="text-xs font-bold text-muted-foreground mr-1">Setor:</span>
+            {(["todas", "Salão", "Esplanada", "Balcão"] as const).map(sec => (
+              <button
+                key={sec}
+                onClick={() => setSelectedArea(sec)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  selectedArea === sec 
+                    ? "bg-foreground text-background shadow-sm" 
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {sec === "todas" ? "TODOS SETORES" : sec.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {/* Estado da mesa */}
+          <div className="flex items-center gap-1.5">
+            {(["todas", "ocupadas", "livres"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  filter === f ? "bg-primary text-white shadow-sm" : "bg-card border border-border text-muted-foreground"
+                }`}
+              >
+                {f.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Grade de Mesas */}
