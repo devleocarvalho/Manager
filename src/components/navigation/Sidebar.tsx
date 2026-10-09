@@ -74,18 +74,18 @@ export function Sidebar() {
       </div>
 
       <div className="pt-4 border-t border-border flex flex-col gap-3">
-        {user && (
+        {(user || isDemoMode) && (
           <div className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-border">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-black text-foreground truncate max-w-[130px]">
-                {tenantProfile?.businessName || "Meu Restaurante"}
+                {tenantProfile?.businessName || (isDemoMode ? "Restaurante Lisboa Demo" : "Meu Restaurante")}
               </span>
               <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">
                 EUR (€)
               </span>
             </div>
             <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-              <span className="truncate mr-2">{user.email}</span>
+              <span className="truncate mr-2">{user?.email || "Modo Demonstração"}</span>
               <button 
                 onClick={() => logout()}
                 className="p-1 hover:text-destructive text-muted-foreground transition-colors"

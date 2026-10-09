@@ -6,6 +6,8 @@ import {
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   sendPasswordResetEmail
 } from "firebase/auth";
@@ -22,6 +24,7 @@ interface AuthContextType {
   loading: boolean;
   isDemoMode: boolean;
   login: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   loginAsDemo: () => Promise<void>;
   register: (email: string, pass: string, businessName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -53,6 +56,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isDemoMode: false,
   login: async () => {},
+  loginWithGoogle: async () => {},
   loginAsDemo: async () => {},
   register: async () => {},
   logout: async () => {},
@@ -66,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
-    // Verifica se já estava em modo demonstração local
+    // Se estiver em modo demonstração local
     if (typeof window !== "undefined" && localStorage.getItem("meugerente_demo_mode") === "true") {
       setIsDemoMode(true);
       setTenantProfile({
@@ -96,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             const initial: TenantProfile = {
               tenantId: currUser.uid,
-              businessName: currUser.displayName || "Meu Restaurante",
+              businessName: currUser.displayName ? `${currUser.displayName}` : "Meu Estabelecimento",
               ownerEmail: currUser.email || "",
               ownerUid: currUser.uid,
               subscription: DEFAULT_SUBSCRIPTION,
@@ -128,16 +132,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    try {
+      localStorage.removeItem("meugerente_demo_mode");
+      setIsDemoMode(false);
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      const currUser = res.user;
+
+      const tenantRef = doc(db, "tenants", currUser.uid);
+      const snap = await getDoc(tenantRef);
+      if (!snap.exists()) {
+        const initial: TenantProfile = {
+          tenantId: currUser.uid,
+          businessName: currUser.displayName || "Meu Restaurante",
+          ownerEmail: currUser.email || "",
+          ownerUid: currUser.uid,
+          subscription: DEFAULT_SUBSCRIPTION,
+          settings: DEFAULT_SETTINGS
+        };
+        await setDoc(tenantRef, initial);
+        setTenantProfile(initial);
+      } else {
+        setTenantProfile(snap.data() as TenantProfile);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loginAsDemo = async () => {
     setLoading(true);
     try {
-      // Tenta login com a conta demo no Firebase Auth
       await signInWithEmailAndPassword(auth, "demo@meugerente.com", "demo123456");
       setIsDemoMode(false);
     } catch (err: any) {
       if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
         try {
-          // Se não existir, tenta registrar no Firebase Auth
           const cred = await createUserWithEmailAndPassword(auth, "demo@meugerente.com", "demo123456");
           const tenantRef = doc(db, "tenants", cred.user.uid);
           const initial: TenantProfile = {
@@ -156,7 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("Falha ao registrar demo no Firebase:", regErr);
         }
       }
-      // Se Firebase Auth não responder ou falhar, ativa modo demo instantâneo localmente
       if (typeof window !== "undefined") {
         localStorage.setItem("meugerente_demo_mode", "true");
       }
@@ -209,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const activeTenantId = user ? user.uid : (tenantProfile?.tenantId || "demo-tenant");
+  const activeTenantId = user ? user.uid : (isDemoMode ? "demo-tenant" : (tenantProfile?.tenantId || "demo-tenant"));
   const activeCurrency: CurrencyCode = tenantProfile?.settings?.currency || "EUR";
 
   return (
@@ -223,6 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         isDemoMode,
         login,
+        loginWithGoogle,
         loginAsDemo,
         register,
         logout,
