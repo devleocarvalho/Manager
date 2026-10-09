@@ -20,8 +20,10 @@ import {
   CreditCard, 
   Banknote, 
   QrCode, 
-  CheckCircle2 
+  CheckCircle2,
+  Wallet
 } from "lucide-react";
+import { CashShiftModal } from "../../components/pdv/CashShiftModal";
 
 export default function PdvPage() {
   const { tenantId, currency } = useAuth();
@@ -34,6 +36,7 @@ export default function PdvPage() {
   const [amountReceived, setAmountReceived] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [showShiftModal, setShowShiftModal] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -149,7 +152,16 @@ export default function PdvPage() {
               <p className="text-muted-foreground text-xs sm:text-sm">Venda expressa com cálculo de troco e envio para cozinha.</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowShiftModal(true)}
+              className="px-3.5 py-2.5 bg-card border border-border hover:border-primary text-foreground rounded-2xl text-xs font-black flex items-center gap-2 shadow-sm transition-all"
+            >
+              <Wallet size={16} className="text-primary" />
+              <span>Turno / Arqueo de Caixa</span>
+            </button>
+            <ThemeToggle />
+          </div>
         </header>
 
         {successMsg && (
@@ -297,6 +309,14 @@ export default function PdvPage() {
             </div>
           </div>
         </div>
+
+        {/* Modal de Arqueo / Turno de Caixa */}
+        <CashShiftModal
+          isOpen={showShiftModal}
+          onClose={() => setShowShiftModal(false)}
+          tenantId={tenantId}
+          currency={currency}
+        />
       </main>
     </div>
   );

@@ -57,6 +57,13 @@ export function BottomNav() {
 
             <div className="grid grid-cols-2 gap-2">
               <Link
+                href="/analytics"
+                onClick={() => setShowMoreMenu(false)}
+                className="flex items-center gap-2.5 p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs font-black text-primary col-span-2"
+              >
+                <TrendingUp size={16} /> Inteligência & BI (Novo)
+              </Link>
+              <Link
                 href="/estoque"
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold text-foreground"

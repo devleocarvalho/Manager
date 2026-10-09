@@ -8,7 +8,7 @@ import {
   updateDoc 
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { TableItem, ComandaItem, MenuItem } from "../domain/types";
+import { TableItem, ComandaItem, MenuItem, CourseStage, MarchingStatus } from "../domain/types";
 import { orderService } from "./orderService";
 import { stockService } from "./stockService";
 import { financeService } from "./financeService";
@@ -73,7 +73,20 @@ export const tableService = {
     return updateData;
   },
 
-  async addItemToTable(tableId: string, currentItems: ComandaItem[], menuItem: MenuItem, notes = "") {
+  async addItemToTable(
+    tableId: string, 
+    currentItems: ComandaItem[], 
+    menuItem: MenuItem, 
+    notes = "",
+    courseStage?: CourseStage
+  ) {
+    let stage: CourseStage = courseStage || "principal";
+    if (!courseStage) {
+      if (menuItem.category === "entradas") stage = "entrada";
+      else if (menuItem.category === "bebidas") stage = "bebida";
+      else if (menuItem.category === "sobremesas") stage = "sobremesa";
+    }
+
     const newItem: ComandaItem = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       name: menuItem.name,
@@ -83,7 +96,9 @@ export const tableService = {
       notes: notes.trim(),
       sentToKitchen: false,
       addedAt: new Date().toISOString(),
-      vatRate: menuItem.vatRate || 13
+      vatRate: menuItem.vatRate || 13,
+      courseStage: stage,
+      marchingStatus: stage === "entrada" || stage === "bebida" ? "marchar" : "aguardar"
     };
 
     const updatedItems = [...(currentItems || []), newItem];
@@ -95,6 +110,21 @@ export const tableService = {
     });
 
     return { items: updatedItems, totalAmount: newTotal };
+  },
+
+  async toggleMarchItem(tableId: string, currentItems: ComandaItem[], itemId: string) {
+    const updatedItems = currentItems.map(it => {
+      if (it.id === itemId) {
+        return { 
+          ...it, 
+          marchingStatus: (it.marchingStatus === "marchar" ? "aguardar" : "marchar") as MarchingStatus 
+        };
+      }
+      return it;
+    });
+
+    await updateDoc(doc(db, "tables", tableId), { items: updatedItems });
+    return updatedItems;
   },
 
   async removeItemFromTable(tableId: string, currentItems: ComandaItem[], itemId: string) {
@@ -136,7 +166,9 @@ export const tableService = {
         category: i.category,
         quantity: i.quantity,
         price: i.price,
-        notes: i.notes || ""
+        notes: i.notes || "",
+        courseStage: i.courseStage || "principal",
+        marchingStatus: i.marchingStatus || "marchar"
       })),
       total_price: unsent.reduce((s, i) => s + (i.price * i.quantity), 0),
       status: "pendente",

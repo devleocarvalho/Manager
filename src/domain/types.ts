@@ -61,6 +61,9 @@ export interface TechnicalSheet {
   items: TechnicalSheetItem[];
 }
 
+export type CourseStage = "bebida" | "entrada" | "principal" | "sobremesa";
+export type MarchingStatus = "aguardar" | "marchar" | "servido";
+
 export interface ComandaItem {
   id: string;
   name: string;
@@ -71,6 +74,8 @@ export interface ComandaItem {
   sentToKitchen: boolean;
   addedAt: string;
   vatRate?: number;
+  courseStage?: CourseStage;
+  marchingStatus?: MarchingStatus;
 }
 
 export type TableStatus = "livre" | "ocupada" | "fechamento" | "chamando_garcom";
@@ -88,6 +93,8 @@ export interface TableItem {
   items: ComandaItem[];
   totalAmount: number;
   waiterCalledAt?: string;
+  waiterName?: string;
+  estimatedDepartureTime?: string; // Previsão de liberação calculada pelo algoritmo de permanência
 }
 
 export type OrderStatus = "pendente" | "preparando" | "pronto" | "entregue";
@@ -99,6 +106,8 @@ export interface OrderItem {
   quantity: number;
   price: number;
   notes?: string;
+  courseStage?: CourseStage;
+  marchingStatus?: MarchingStatus;
 }
 
 export interface Order {
@@ -118,6 +127,7 @@ export interface Order {
   started_at?: string;
   completed_at?: string;
   delivered_at?: string;
+  waiterName?: string;
 }
 
 export interface InventoryItem {
@@ -143,4 +153,85 @@ export interface FinancialTransaction {
   description: string;
   payment_method?: string;
   date: string;
+}
+
+// ==========================================
+// TIPOS AVANÇADOS ERP: ARQUEO DE CAIXA (TURNOS)
+// ==========================================
+
+export type ShiftType = "almoco" | "jantar" | "geral";
+
+export interface CashRegisterShift {
+  id: string;
+  tenant_id: string;
+  openedAt: string;
+  closedAt?: string;
+  status: "aberto" | "fechado";
+  operatorName: string;
+  shiftType: ShiftType;
+  initialFloat: number; // Fundo de troco (€)
+  sangrias: { amount: number; reason: string; time: string }[];
+  suprimentos: { amount: number; reason: string; time: string }[];
+  expectedCash: number;
+  declaredCash?: number;
+  difference?: number;
+  cardTotal: number;
+  mbwayTotal: number;
+  totalSales: number;
+  notes?: string;
+}
+
+// ==========================================
+// TIPOS AVANÇADOS ERP: BUSINESS INTELLIGENCE (BI)
+// ==========================================
+
+export type BcgCategory = "estrela" | "burro_de_carga" | "puzzle" | "cao";
+
+export interface MenuEngineeringItem {
+  id: string;
+  name: string;
+  category: string;
+  salesCount: number;
+  revenue: number;
+  costPrice: number;
+  unitMargin: number;
+  marginPercent: number;
+  popularityRank: "alta" | "baixa";
+  profitabilityRank: "alta" | "baixa";
+  bcgCategory: BcgCategory;
+}
+
+export interface HourlySalesData {
+  hour: string;
+  sales: number;
+  ordersCount: number;
+  shift: ShiftType;
+}
+
+export interface WaiterPerformance {
+  waiterName: string;
+  tablesServed: number;
+  totalRevenue: number;
+  averageTicket: number;
+}
+
+export interface MiseEnPlacePrediction {
+  dishName: string;
+  category: string;
+  predictedDemandNextShift: number;
+  suggestedThawPrep: number; // Qtd para descongelar / preparar
+  unit: string;
+  criticalAllergens: string[];
+}
+
+export interface FefoPushAlert {
+  id: string;
+  ingredientName: string;
+  lote: string;
+  daysToExpire: number;
+  quantity: number;
+  unit: string;
+  affectedDishName?: string;
+  suggestedDiscountPercent: number;
+  urgencyLevel: "critico" | "alto" | "moderado";
 }

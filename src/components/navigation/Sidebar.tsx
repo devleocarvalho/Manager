@@ -23,10 +23,11 @@ import { ThemeToggle } from "../common/ThemeToggle";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, tenantProfile, logout, subscription } = useAuth();
+  const { user, isDemoMode, tenantProfile, logout, subscription } = useAuth();
 
   const navItems = [
     { name: "Cockpit", href: "/", icon: TrendingUp },
+    { name: "Inteligência & BI", href: "/analytics", icon: BarChart3 },
     { name: "Mesas & Salão", href: "/mesas", icon: UtensilsCrossed },
     { name: "Modo Garçom", href: "/garcom", icon: Smartphone },
     { name: "PDV (Caixa)", href: "/pdv", icon: ShoppingCart },

@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { Users, Send, Plus, Bell } from "lucide-react";
+import { Users, Send, Plus, Bell, Clock } from "lucide-react";
 import { TableItem, CurrencyCode } from "../../domain/types";
 import { formatCurrency } from "../../lib/currency";
+import { analyticsService } from "../../services/analyticsService";
 
 interface TableCardProps {
   table: TableItem;
@@ -15,6 +16,17 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
   const isOccupied = table.status !== "livre";
   const isCalling = table.status === "chamando_garcom";
   const unsentCount = table.items?.filter(i => !i.sentToKitchen).length || 0;
+
+  const hasMain = table.items?.some(i => i.courseStage === "principal" || i.category === "pratos");
+  const hasDessert = table.items?.some(i => i.courseStage === "sobremesa" || i.category === "sobremesas");
+  const isBilling = table.status === "fechamento";
+  const estDeparture = analyticsService.calculateEstimatedDeparture(
+    table.openedAt,
+    table.items?.length || 0,
+    hasMain,
+    hasDessert,
+    isBilling
+  );
 
   return (
     <button
@@ -48,9 +60,15 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
         </h3>
 
         {isOccupied && (
-          <p className="text-xs text-foreground font-bold truncate mt-1">
-            {table.customerName || "Cliente"}
-          </p>
+          <div className="mt-1">
+            <p className="text-xs text-foreground font-bold truncate">
+              {table.customerName || "Cliente"}
+            </p>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+              <Clock size={10} className="text-primary" />
+              <span>Saída est.: <strong className="text-foreground">{estDeparture}</strong></span>
+            </div>
+          </div>
         )}
       </div>
 

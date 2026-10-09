@@ -52,9 +52,25 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
       <div className="py-3 space-y-2">
         {order.items.map((item, idx) => (
           <div key={idx} className="bg-black/5 dark:bg-white/5 p-2 rounded-xl text-xs">
-            <div className="font-bold text-foreground flex items-center">
-              <span className="text-primary font-black mr-1.5">{item.quantity}x</span>
-              <span>{item.name}</span>
+            <div className="font-bold text-foreground flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-primary font-black mr-1.5">{item.quantity}x</span>
+                <span>{item.name}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {item.courseStage && (
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-muted-foreground">
+                    {item.courseStage}
+                  </span>
+                )}
+                <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                  item.marchingStatus === "marchar" 
+                    ? "bg-emerald-500/20 text-emerald-600 font-extrabold" 
+                    : "bg-amber-500/20 text-amber-500"
+                }`}>
+                  {item.marchingStatus === "marchar" ? "Marchar" : "Aguardar"}
+                </span>
+              </div>
             </div>
             {item.notes && (
               <p className="text-[10px] text-amber-500 font-bold mt-1 flex items-center gap-1">
