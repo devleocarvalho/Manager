@@ -25,6 +25,7 @@ export interface TenantProfile {
   ownerUid: string;
   subscription: SubscriptionInfo;
   settings?: TenantSettings;
+  operatingSchedule?: OperatingSchedule;
 }
 
 export interface MenuItem {
@@ -271,3 +272,48 @@ export interface FefoPushAlert {
   suggestedDiscountPercent: number;
   urgencyLevel: "critico" | "alto" | "moderado";
 }
+
+// ==========================================
+// TIPOS: RESERVAS & DIAS DE FUNCIONAMENTO
+// ==========================================
+
+export interface ShiftTimeWindow {
+  open: string;  // Ex: "12:00"
+  close: string; // Ex: "15:30"
+}
+
+export interface DaySchedule {
+  isOpen: boolean;
+  lunch?: ShiftTimeWindow;
+  dinner?: ShiftTimeWindow;
+}
+
+export interface OperatingSchedule {
+  days: Record<number, DaySchedule>; // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  slotDurationMinutes: number; // Intervalo para slots de reserva (ex: 30 min)
+  maxGuestsPerSlot: number; // Limite de pessoas simultâneas
+  minAdvanceNoticeHours?: number; // Horas mínimas de antecedência
+  notes?: string;
+}
+
+export type ReservationStatus = "pendente" | "confirmada" | "sentada" | "cancelada" | "no_show";
+
+export interface Reservation {
+  id: string;
+  tenant_id: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  shift: ShiftType;
+  guestsCount: number;
+  areaPreference?: "salao" | "esplanada" | "balcao" | "qualquer";
+  tableId?: string;
+  tableNumber?: number;
+  notes?: string;
+  status: ReservationStatus;
+  source: "painel" | "publico" | "google";
+  createdAt: string;
+}
+

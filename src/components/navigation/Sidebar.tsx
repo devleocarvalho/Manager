@@ -16,7 +16,8 @@ import {
   Store, 
   LogOut, 
   Sparkles,
-  Smartphone
+  Smartphone,
+  CalendarCheck
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { ThemeToggle } from "../common/ThemeToggle";
@@ -28,6 +29,7 @@ export function Sidebar() {
   const navItems = [
     { name: "Cockpit", href: "/", icon: TrendingUp },
     { name: "Inteligência & BI", href: "/analytics", icon: BarChart3 },
+    { name: "Reservas", href: "/reservas", icon: CalendarCheck },
     { name: "Mesas & Salão", href: "/mesas", icon: UtensilsCrossed },
     { name: "Modo Garçom", href: "/garcom", icon: Smartphone },
     { name: "PDV (Caixa)", href: "/pdv", icon: ShoppingCart },
@@ -60,13 +62,13 @@ export function Sidebar() {
               <Link 
                 key={item.name} 
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl font-bold text-xs transition-all ${
+                className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all ${
                   isActive 
                     ? "text-white bg-primary shadow-lg shadow-primary/25" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                    : "text-foreground/80 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
                 }`}
               >
-                <item.icon size={18} />
+                <item.icon size={20} className={isActive ? "text-white" : "text-primary"} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -76,23 +78,23 @@ export function Sidebar() {
 
       <div className="pt-4 border-t border-border flex flex-col gap-3">
         {(user || isDemoMode) && (
-          <div className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-border">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-black text-foreground truncate max-w-[130px]">
+          <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-border">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-black text-foreground truncate max-w-[130px]">
                 {tenantProfile?.businessName || (isDemoMode ? "Restaurante Lisboa Demo" : "Meu Restaurante")}
               </span>
-              <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+              <span className="text-xs uppercase font-extrabold px-2 py-0.5 rounded bg-primary/20 text-primary">
                 EUR (€)
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-              <span className="truncate mr-2">{user?.email || "Modo Demonstração"}</span>
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1.5 border-t border-border">
+              <span className="truncate mr-2 font-medium">{user?.email || "Modo Demonstração"}</span>
               <button 
                 onClick={() => logout()}
                 className="p-1 hover:text-destructive text-muted-foreground transition-colors"
                 title="Encerrar sessão"
               >
-                <LogOut size={14} />
+                <LogOut size={16} />
               </button>
             </div>
           </div>

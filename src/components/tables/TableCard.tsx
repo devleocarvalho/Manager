@@ -42,23 +42,23 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full ${
+            <span className={`text-xs uppercase font-black px-2.5 py-1 rounded-full ${
               isCalling
                 ? "bg-destructive text-white"
                 : isOccupied 
-                  ? "bg-amber-500 text-white" 
+                  ? "bg-amber-500 text-white shadow-sm" 
                   : "bg-success/20 text-success"
             }`}>
               {isCalling ? "Chamando!" : isOccupied ? "Ocupada" : "Livre"}
             </span>
             {table.area && (
-              <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-muted-foreground">
+              <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-foreground">
                 {table.area}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-semibold">
-            <Users size={12} /> {table.capacity}
+          <div className="flex items-center gap-1 text-xs text-foreground font-bold">
+            <Users size={14} className="text-primary" /> {table.capacity}
           </div>
         </div>
 
@@ -67,12 +67,12 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
         </h3>
 
         {isOccupied && (
-          <div className="mt-1">
-            <p className="text-xs text-foreground font-bold truncate">
+          <div className="mt-1.5">
+            <p className="text-sm text-foreground font-black truncate">
               {table.customerName || "Cliente"}
             </p>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-              <Clock size={10} className="text-primary" />
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <Clock size={12} className="text-primary" />
               <span>Saída est.: <strong className="text-foreground">{estDeparture}</strong></span>
             </div>
           </div>
@@ -80,24 +80,24 @@ export function TableCard({ table, currency, onClick }: TableCardProps) {
       </div>
 
       {isOccupied ? (
-        <div className="mt-3 pt-2 border-t border-border/50">
+        <div className="mt-3 pt-2.5 border-t border-border">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs font-bold text-muted-foreground">
               {table.items?.length || 0} itens
             </span>
-            <span className="font-black text-foreground text-sm">
+            <span className="font-black text-foreground text-base">
               {formatCurrency(table.totalAmount || 0, currency)}
             </span>
           </div>
           {unsentCount > 0 && (
-            <div className="text-[10px] font-bold text-primary mt-1 flex items-center gap-1">
-              <Send size={10} /> {unsentCount} para a cozinha
+            <div className="text-xs font-black text-primary mt-1 flex items-center gap-1">
+              <Send size={12} /> {unsentCount} para a cozinha
             </div>
           )}
         </div>
       ) : (
-        <div className="text-[11px] font-bold text-success flex items-center gap-1 mt-3">
-          <Plus size={14} /> Abrir Mesa
+        <div className="text-xs font-black text-success flex items-center gap-1 mt-3">
+          <Plus size={15} /> Abrir Mesa
         </div>
       )}
     </button>

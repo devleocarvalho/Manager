@@ -12,7 +12,8 @@ import {
   Bell, 
   Search, 
   X,
-  Sparkles
+  Sparkles,
+  CalendarCheck
 } from "lucide-react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -201,6 +202,16 @@ function CardapioContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href={`/reservar?tenant=${tenantId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-2 rounded-xl text-xs font-bold bg-card border border-border hover:border-primary text-muted-foreground hover:text-foreground flex items-center gap-1 transition-all"
+              title="Reservar Mesa para outra data"
+            >
+              <CalendarCheck size={14} className="text-primary" />
+              <span className="hidden sm:inline">Reservar</span>
+            </a>
             <button
               onClick={handleCallWaiter}
               disabled={waiterCalled}

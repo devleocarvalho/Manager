@@ -80,6 +80,13 @@ service cloud.firestore {
       allow read, write: if belongsToTenant();
     }
 
+    // Reservas de Mesas e Agendamentos (Reservations)
+    match /reservations/{reservationId} {
+      allow read, update, delete: if belongsToTenant();
+      // Permite criar pelo painel do tenant ou através do formulário público / Google com tenant_id
+      allow create: if belongsToTenant() || (request.resource.data.tenant_id != null);
+    }
+
     // Bloqueio padrão para qualquer outra coleção não autorizada explicitamente
     match /{document=**} {
       allow read, write: if false;

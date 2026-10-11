@@ -13,7 +13,8 @@ import { TableDrawer } from "../../components/tables/TableDrawer";
 import { OpenTableModal } from "../../components/tables/OpenTableModal";
 import { CloseBillModal } from "../../components/tables/CloseBillModal";
 import { QrCodeModal } from "../../components/tables/QrCodeModal";
-import { UtensilsCrossed, Plus, QrCode } from "lucide-react";
+import { UtensilsCrossed, Plus, QrCode, CalendarCheck } from "lucide-react";
+import Link from "next/link";
 
 export default function MesasPage() {
   const { tenantId, currency, tenantProfile } = useAuth();
@@ -103,6 +104,12 @@ export default function MesasPage() {
           </div>
 
           <div className="flex items-center flex-wrap gap-2">
+            <Link
+              href="/reservas"
+              className="px-3.5 py-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1.5 transition-all"
+            >
+              <CalendarCheck size={16} /> Reservas
+            </Link>
             <button
               onClick={() => setShowQrModal(true)}
               className="px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold flex items-center gap-1.5 transition-all"

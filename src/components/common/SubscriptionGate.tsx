@@ -11,8 +11,8 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const [demoLoading, setDemoLoading] = useState(false);
   const pathname = usePathname();
 
-  // Rotas públicas (cardápio via QR Code e login não exigem autenticação do dono)
-  const isPublic = pathname === "/login" || pathname.startsWith("/cardapio");
+  // Rotas públicas (cardápio via QR Code, página pública de reservas e login)
+  const isPublic = pathname === "/login" || pathname.startsWith("/cardapio") || pathname.startsWith("/reservar");
   if (isPublic) {
     return <>{children}</>;
   }

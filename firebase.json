@@ -14,6 +14,10 @@
       {
         "source": "/cardapio/**",
         "destination": "/cardapio.html"
+      },
+      {
+        "source": "/reservar/**",
+        "destination": "/reservar.html"
       }
     ],
     "headers": [

@@ -13,7 +13,8 @@ import {
   X, 
   Package, 
   Wallet, 
-  LogOut 
+  LogOut,
+  CalendarCheck 
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { ThemeToggle } from "../common/ThemeToggle";
@@ -24,7 +25,7 @@ export function BottomNav() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Não exibe em rotas públicas ou login
-  if (pathname === "/login" || pathname.startsWith("/cardapio")) {
+  if (pathname === "/login" || pathname.startsWith("/cardapio") || pathname.startsWith("/reservar")) {
     return null;
   }
 
@@ -57,11 +58,18 @@ export function BottomNav() {
 
             <div className="grid grid-cols-2 gap-2">
               <Link
-                href="/analytics"
+                href="/reservas"
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs font-black text-primary col-span-2"
               >
-                <TrendingUp size={16} /> Inteligência & BI (Novo)
+                <CalendarCheck size={16} /> Reservas & Agendamentos (Novo)
+              </Link>
+              <Link
+                href="/analytics"
+                onClick={() => setShowMoreMenu(false)}
+                className="flex items-center gap-2.5 p-3 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold text-foreground col-span-2"
+              >
+                <TrendingUp size={16} /> Inteligência & BI
               </Link>
               <Link
                 href="/estoque"
