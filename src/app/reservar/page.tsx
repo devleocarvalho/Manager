@@ -26,13 +26,15 @@ import {
 } from "../../domain/types";
 import { 
   reservationService, 
-  DEFAULT_OPERATING_SCHEDULE, 
-  DAY_NAMES 
+  DEFAULT_OPERATING_SCHEDULE
 } from "../../services/reservationService";
 import { ThemeToggle } from "../../components/common/ThemeToggle";
+import { LanguageSelector } from "../../components/common/LanguageSelector";
+import { useLanguage } from "../../context/LanguageContext";
 
 function ReservarContent() {
   const searchParams = useSearchParams();
+  const { t, getDayName } = useLanguage();
   const [tenantId, setTenantId] = useState<string>("demo-tenant");
 
   const [restaurantName, setRestaurantName] = useState("Restaurante & Bar");
@@ -110,10 +112,10 @@ function ReservarContent() {
     }
   }, [date, schedule]);
 
-  // Extrai nome do dia
+  // Extrai nome do dia traduzido dinamicamente
   const dateParts = date.split("-").map(Number);
   const selectedDateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 12, 0, 0);
-  const dayName = DAY_NAMES[selectedDateObj.getDay()];
+  const dayName = getDayName(selectedDateObj.getDay());
 
   // Detecta se veio do Google
   const isFromGoogle = searchParams.get("source") === "google" || 
@@ -127,7 +129,7 @@ function ReservarContent() {
     }
 
     if (!isOpenDay) {
-      alert("Desculpe, o restaurante não abre no dia selecionado.");
+      alert(t.publicBooking.closedAlertDesc);
       return;
     }
 
@@ -158,7 +160,7 @@ function ReservarContent() {
       });
     } catch (e) {
       console.error(e);
-      alert("Erro ao enviar a reserva. Por favor, tente novamente.");
+      alert("Erro ao enviar reserva.");
     } finally {
       setSubmitting(false);
     }
@@ -166,7 +168,7 @@ function ReservarContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
-      {/* Topo / Branding */}
+      {/* Topo / Branding & Seletor de Idioma */}
       <header className="bg-card border-b border-border p-4 sticky top-0 z-20 backdrop-blur-md bg-card/95">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -176,11 +178,14 @@ function ReservarContent() {
             <div>
               <h1 className="text-base font-black leading-tight text-foreground">{restaurantName}</h1>
               <p className="text-xs text-muted-foreground font-bold flex items-center gap-1">
-                <Sparkles size={11} className="text-primary" /> Reserva de Mesa Online
+                <Sparkles size={11} className="text-primary" /> {t.publicBooking.pageTitle}
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -193,48 +198,48 @@ function ReservarContent() {
               <CheckCircle2 size={36} />
             </div>
 
-            <h2 className="text-2xl font-black text-foreground">Reserva Confirmada!</h2>
-            <p className="text-xs text-muted-foreground mt-1 mb-6">
-              Aguardamos por você no <strong>{restaurantName}</strong>.
+            <h2 className="text-2xl font-black text-foreground">{t.publicBooking.confirmedTitle}</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-6">
+              {t.publicBooking.confirmedSubtitle} <strong>{restaurantName}</strong>.
             </p>
 
-            <div className="bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-xs space-y-2 text-left mb-6">
-              <div className="flex justify-between pb-2 border-b border-border/40">
-                <span className="text-muted-foreground">Titular:</span>
+            <div className="bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-sm space-y-2.5 text-left mb-6">
+              <div className="flex justify-between pb-2 border-b border-border">
+                <span className="text-muted-foreground">{t.publicBooking.holderLabel}</span>
                 <span className="font-bold text-foreground">{bookingConfirmed.customerName}</span>
               </div>
-              <div className="flex justify-between pb-2 border-b border-border/40">
-                <span className="text-muted-foreground">Data:</span>
+              <div className="flex justify-between pb-2 border-b border-border">
+                <span className="text-muted-foreground">{t.publicBooking.dateLabel}</span>
                 <span className="font-bold text-foreground">{bookingConfirmed.date} ({dayName})</span>
               </div>
-              <div className="flex justify-between pb-2 border-b border-border/40">
-                <span className="text-muted-foreground">Horário:</span>
-                <span className="font-bold text-primary text-sm">{bookingConfirmed.time}</span>
+              <div className="flex justify-between pb-2 border-b border-border">
+                <span className="text-muted-foreground">{t.publicBooking.timeLabel}</span>
+                <span className="font-bold text-primary text-base">{bookingConfirmed.time}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Convidados:</span>
-                <span className="font-bold text-foreground">{bookingConfirmed.guestsCount} pessoas</span>
+                <span className="text-muted-foreground">{t.publicBooking.guestsLabel}</span>
+                <span className="font-bold text-foreground">{bookingConfirmed.guestsCount} {t.common.people}</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground mb-4">
-              Por favor, chegue com até 15 minutos de antecedência. Em caso de imprevisto, contate o restaurante.
+            <p className="text-xs text-muted-foreground mb-5">
+              {t.publicBooking.arrivalNotice}
             </p>
 
             <button
               onClick={() => setBookingConfirmed(null)}
-              className="w-full py-3 bg-primary text-white font-black rounded-2xl text-xs hover:bg-primary/90 transition-all shadow-md shadow-primary/25"
+              className="w-full py-3.5 bg-primary text-white font-black rounded-2xl text-xs hover:bg-primary/90 transition-all shadow-md shadow-primary/25"
             >
-              Fazer Outra Reserva
+              {t.publicBooking.bookAnotherBtn}
             </button>
           </div>
         ) : (
           /* Formulário de Reserva */
           <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
             <div className="mb-6">
-              <h2 className="text-xl font-black text-foreground">Garanta sua Mesa</h2>
+              <h2 className="text-xl font-black text-foreground">{t.publicBooking.bookYourTableTitle}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Escolha o dia, horário e quantidade de pessoas.
+                {t.publicBooking.bookYourTableSubtitle}
               </p>
             </div>
 
@@ -242,7 +247,7 @@ function ReservarContent() {
               {/* Data da Reserva */}
               <div>
                 <label className="text-sm font-black text-foreground flex items-center gap-1.5 mb-2">
-                  <Calendar size={16} className="text-primary" /> Selecione a Data *
+                  <Calendar size={16} className="text-primary" /> {t.publicBooking.selectDateLabel}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -262,8 +267,8 @@ function ReservarContent() {
                   <div className="mt-2.5 p-3.5 rounded-2xl bg-destructive/15 border border-destructive/40 text-destructive text-sm flex items-center gap-2.5 animate-in fade-in">
                     <AlertTriangle size={18} className="shrink-0" />
                     <div>
-                      <span className="font-black">O restaurante não abre aos {dayName}s!</span>
-                      <p className="text-xs opacity-95">Por favor, selecione outro dia da semana para agendar sua mesa.</p>
+                      <span className="font-black">{t.publicBooking.closedAlertTitle}</span>
+                      <p className="text-xs opacity-95">{t.publicBooking.closedAlertDesc}</p>
                     </div>
                   </div>
                 )}
@@ -273,11 +278,11 @@ function ReservarContent() {
               {isOpenDay && (
                 <div>
                   <label className="text-sm font-black text-foreground flex items-center gap-1.5 mb-2">
-                    <Clock size={16} className="text-primary" /> Horário Desejado *
+                    <Clock size={16} className="text-primary" /> {t.publicBooking.selectTimeLabel}
                   </label>
                   {availableSlots.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic bg-black/5 dark:bg-white/5 p-3.5 rounded-xl border border-border">
-                      Não há horários disponíveis para reservas neste dia.
+                      {t.reservations.noTimesConfigured}
                     </p>
                   ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto p-1.5 border border-border rounded-2xl bg-black/5 dark:bg-white/5">
@@ -304,7 +309,7 @@ function ReservarContent() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-black text-foreground flex items-center gap-1.5 mb-2">
-                    <Users size={16} className="text-primary" /> Pessoas *
+                    <Users size={16} className="text-primary" /> {t.publicBooking.selectGuestsLabel}
                   </label>
                   <input
                     type="number"
@@ -319,30 +324,30 @@ function ReservarContent() {
 
                 <div>
                   <label className="text-sm font-black text-foreground block mb-2">
-                    Ambiente
+                    {t.publicBooking.environmentLabel}
                   </label>
                   <select
                     value={areaPreference}
                     onChange={e => setAreaPreference(e.target.value as any)}
                     className="w-full bg-card border border-border rounded-xl px-3 py-3 text-sm font-bold text-foreground focus:border-primary focus:outline-none shadow-sm"
                   >
-                    <option value="qualquer">Qualquer Ambiente</option>
-                    <option value="salao">Salão Principal</option>
-                    <option value="esplanada">Esplanada (Exterior)</option>
-                    <option value="balcao">Balcão</option>
+                    <option value="qualquer">{t.common.anySector}</option>
+                    <option value="salao">{t.common.mainRoom}</option>
+                    <option value="esplanada">{t.common.terrace}</option>
+                    <option value="balcao">{t.common.counter}</option>
                   </select>
                 </div>
               </div>
 
               {/* Informações Pessoais */}
               <div className="space-y-3 pt-3.5 border-t border-border">
-                <span className="text-xs font-black uppercase text-muted-foreground tracking-wider">Seus Dados de Contato</span>
+                <span className="text-xs font-black uppercase text-muted-foreground tracking-wider">{t.publicBooking.contactInfoLabel}</span>
                 
                 <div className="relative">
                   <User className="absolute left-3.5 top-3.5 text-primary" size={16} />
                   <input
                     type="text"
-                    placeholder="Seu nome completo *"
+                    placeholder={t.publicBooking.fullNamePlaceholder}
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
                     required
@@ -355,7 +360,7 @@ function ReservarContent() {
                     <Phone className="absolute left-3.5 top-3.5 text-primary" size={16} />
                     <input
                       type="tel"
-                      placeholder="WhatsApp / Telefone *"
+                      placeholder={t.publicBooking.phonePlaceholder}
                       value={customerPhone}
                       onChange={e => setCustomerPhone(e.target.value)}
                       required
@@ -367,7 +372,7 @@ function ReservarContent() {
                     <Mail className="absolute left-3.5 top-3.5 text-primary" size={16} />
                     <input
                       type="email"
-                      placeholder="E-mail (opcional)"
+                      placeholder={t.publicBooking.emailPlaceholder}
                       value={customerEmail}
                       onChange={e => setCustomerEmail(e.target.value)}
                       className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-foreground focus:border-primary focus:outline-none shadow-sm"
@@ -379,7 +384,7 @@ function ReservarContent() {
                   <FileText className="absolute left-3.5 top-3.5 text-primary" size={16} />
                   <input
                     type="text"
-                    placeholder="Observação (ex: Aniversário, bebê, etc.)"
+                    placeholder={t.publicBooking.notesPlaceholder}
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-foreground focus:border-primary focus:outline-none shadow-sm"
@@ -392,9 +397,9 @@ function ReservarContent() {
                 <button
                   type="submit"
                   disabled={submitting || !isOpenDay || !time}
-                  className="w-full py-3.5 bg-primary text-white font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all active:scale-98 disabled:opacity-50"
+                  className="w-full py-3.5 bg-primary text-white font-black rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all active:scale-98 disabled:opacity-50"
                 >
-                  {submitting ? "A confirmar reserva..." : "Confirmar Minha Reserva 🍽️"}
+                  {submitting ? t.publicBooking.submittingBtn : t.publicBooking.submitBtn}
                 </button>
               </div>
             </form>
@@ -402,9 +407,9 @@ function ReservarContent() {
         )}
       </main>
 
-      {/* Rodapé sutil */}
-      <footer className="text-center py-4 text-[11px] text-muted-foreground">
-        Powered by <strong>MeuGerente Restaurant OS</strong>
+      {/* Rodapé */}
+      <footer className="text-center py-4 text-xs text-muted-foreground">
+        {t.common.poweredBy} <strong>MeuGerente Restaurant OS</strong>
       </footer>
     </div>
   );
@@ -412,7 +417,7 @@ function ReservarContent() {
 
 export default function ReservarPublicPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-xs text-muted-foreground">A carregar sistema de reservas...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-xs text-muted-foreground">Loading...</div>}>
       <ReservarContent />
     </Suspense>
   );

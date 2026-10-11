@@ -20,22 +20,25 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { ThemeToggle } from "../common/ThemeToggle";
+import { LanguageSelector } from "../common/LanguageSelector";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isDemoMode, tenantProfile, logout, subscription } = useAuth();
+  const { t } = useLanguage();
 
   const navItems = [
-    { name: "Cockpit", href: "/", icon: TrendingUp },
-    { name: "Inteligência & BI", href: "/analytics", icon: BarChart3 },
-    { name: "Reservas", href: "/reservas", icon: CalendarCheck },
-    { name: "Mesas & Salão", href: "/mesas", icon: UtensilsCrossed },
-    { name: "Modo Garçom", href: "/garcom", icon: Smartphone },
-    { name: "PDV (Caixa)", href: "/pdv", icon: ShoppingCart },
-    { name: "Cozinha (KDS)", href: "/cozinha", icon: ChefHat },
-    { name: "Estoque", href: "/estoque", icon: Package },
-    { name: "Financeiro & DRE", href: "/financeiro", icon: Wallet },
+    { name: t.nav.cockpit, href: "/", icon: TrendingUp },
+    { name: t.nav.analytics, href: "/analytics", icon: BarChart3 },
+    { name: t.nav.reservations, href: "/reservas", icon: CalendarCheck },
+    { name: t.nav.tables, href: "/mesas", icon: UtensilsCrossed },
+    { name: t.nav.waiterMode, href: "/garcom", icon: Smartphone },
+    { name: t.nav.pos, href: "/pdv", icon: ShoppingCart },
+    { name: t.nav.kitchen, href: "/cozinha", icon: ChefHat },
+    { name: t.nav.inventory, href: "/estoque", icon: Package },
+    { name: t.nav.finance, href: "/financeiro", icon: Wallet },
   ];
 
   return (
@@ -100,7 +103,10 @@ export function Sidebar() {
           </div>
         )}
 
-        <ThemeToggle className="w-full" />
+        <div className="flex items-center gap-2">
+          <LanguageSelector className="flex-1" />
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   );

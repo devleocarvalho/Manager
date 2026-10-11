@@ -15,6 +15,7 @@ import { CloseBillModal } from "../../components/tables/CloseBillModal";
 import { QrCodeModal } from "../../components/tables/QrCodeModal";
 import { UtensilsCrossed, Plus, QrCode, CalendarCheck } from "lucide-react";
 import Link from "next/link";
+import { LanguageSelector } from "../../components/common/LanguageSelector";
 
 export default function MesasPage() {
   const { tenantId, currency, tenantProfile } = useAuth();
@@ -130,6 +131,7 @@ export default function MesasPage() {
             >
               <Plus size={16} /> + Nova Mesa
             </button>
+            <LanguageSelector />
             <ThemeToggle />
           </div>
         </header>

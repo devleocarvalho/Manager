@@ -149,6 +149,8 @@ export interface RecipeIngredientCost {
   portionQty: number; // Ex: 50 (50g)
   portionUnit: "g" | "kg" | "ml" | "l" | "un";
   portionCost: number; // Ex: €1.00
+  inventoryItemId?: string; // ID do lote/item vinculado no estoque
+  isFromStock?: boolean; // Se é vinculado ao estoque real
 }
 
 export interface DishCostBreakdown {

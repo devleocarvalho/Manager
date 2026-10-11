@@ -26,6 +26,8 @@ import { analyticsService } from "../../services/analyticsService";
 import { orderService } from "../../services/orderService";
 import { stockService } from "../../services/stockService";
 import { EscandalloSimulator } from "../../components/analytics/EscandalloSimulator";
+import { Sidebar } from "../../components/navigation/Sidebar";
+import { useLanguage } from "../../context/LanguageContext";
 import { 
   Order, 
   InventoryItem, 
@@ -40,6 +42,7 @@ import {
 
 export default function AnalyticsPage() {
   const { tenantId, currency } = useAuth();
+  const { t } = useLanguage();
 
   // Tab de Navegação
   const [activeTab, setActiveTab] = useState<"bi" | "escandallo">("bi");
@@ -154,104 +157,107 @@ export default function AnalyticsPage() {
   const maxSales = Math.max(...hourlyData.map(h => h.sales), 100);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6 pb-24">
-      {/* Topo / Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-primary/20 text-primary">
-              Enterprise BI & Analytics
-            </span>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock size={12} /> Sincronização em Tempo Real
-            </span>
+    <div className="min-h-screen bg-background text-foreground flex">
+      <Sidebar />
+
+      <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto space-y-6 pb-24 overflow-y-auto">
+        {/* Topo / Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-primary/20 text-primary">
+                {t.analytics.badge}
+              </span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock size={12} /> {t.analytics.realtimeSync}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2">
+              {t.analytics.title}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {t.analytics.subtitle}
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2">
-            Inteligência de Operação & Cardápio
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Curva de procura, engenharia de cardápio, previsão de mise en place e radar anti-desperdício.
-          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-3.5 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border rounded-xl text-xs font-bold text-foreground flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Download size={14} /> {t.analytics.exportCsv}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Navegação entre BI e Escandallo Dinâmico */}
+        <div className="flex items-center gap-2 border-b border-border pb-3">
           <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border rounded-xl text-xs font-bold text-foreground flex items-center gap-2 transition-all shadow-sm"
+            onClick={() => setActiveTab("bi")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeTab === "bi"
+                ? "bg-primary text-white shadow-md shadow-primary/25"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Download size={14} /> Exportar Relatório (CSV)
+            <BarChart3 size={15} /> {t.analytics.biTab}
+          </button>
+          <button
+            onClick={() => setActiveTab("escandallo")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeTab === "escandallo"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/25"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Calculator size={15} /> {t.analytics.escandalloTab}
           </button>
         </div>
-      </div>
 
-      {/* Navegação entre BI e Escandallo Dinâmico */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
-        <button
-          onClick={() => setActiveTab("bi")}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
-            activeTab === "bi"
-              ? "bg-primary text-white shadow-md shadow-primary/25"
-              : "bg-card border border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <BarChart3 size={15} /> 1. BI & Inteligência de Operação
-        </button>
-        <button
-          onClick={() => setActiveTab("escandallo")}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
-            activeTab === "escandallo"
-              ? "bg-amber-500 text-white shadow-md shadow-amber-500/25"
-              : "bg-card border border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Calculator size={15} /> 2. Engenharia de Custos & Escandallo (Margens & Lucro)
-        </button>
-      </div>
+        {activeTab === "escandallo" ? (
+          <EscandalloSimulator currency={currency} tenantId={tenantId} />
+        ) : (
+          <>
+            {/* Barra de Filtros Sincronizados */}
+        <div className="bg-card border border-border rounded-2xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1 mr-2">
+              <Filter size={13} /> {t.analytics.filters}
+            </span>
 
-      {activeTab === "escandallo" ? (
-        <EscandalloSimulator currency={currency} />
-      ) : (
-        <>
-          {/* Barra de Filtros Sincronizados */}
-      <div className="bg-card border border-border rounded-2xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1 mr-2">
-            <Filter size={13} /> Filtros:
-          </span>
+            {/* Período */}
+            {(["hoje", "ontem", "7dias", "mes"] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  period === p ? "bg-primary text-white shadow-sm" : "bg-black/5 dark:bg-white/5 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {p === "hoje" ? t.analytics.today : p === "ontem" ? t.analytics.yesterday : p === "7dias" ? t.analytics.last7days : t.analytics.thisMonth}
+              </button>
+            ))}
+          </div>
 
-          {/* Período */}
-          {(["hoje", "ontem", "7dias", "mes"] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                period === p ? "bg-primary text-white shadow-sm" : "bg-black/5 dark:bg-white/5 text-muted-foreground hover:text-foreground"
-              }`}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Turno */}
+            <select
+              value={selectedShift}
+              onChange={e => setSelectedShift(e.target.value as any)}
+              className="bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
             >
-              {p === "hoje" ? "Hoje" : p === "ontem" ? "Ontem" : p === "7dias" ? "Últimos 7 dias" : "Este Mês"}
-            </button>
-          ))}
-        </div>
+              <option value="todos">{t.analytics.allShifts}</option>
+              <option value="almoco">{t.analytics.lunchShift}</option>
+              <option value="jantar">{t.analytics.dinnerShift}</option>
+            </select>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Turno */}
-          <select
-            value={selectedShift}
-            onChange={e => setSelectedShift(e.target.value as any)}
-            className="bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-          >
-            <option value="todos">Todos os Turnos</option>
-            <option value="almoco">Turno Almoço (11h-16h)</option>
-            <option value="jantar">Turno Jantar (18h-23h)</option>
-          </select>
-
-          {/* Garçom */}
-          <select
-            value={selectedWaiter}
-            onChange={e => setSelectedWaiter(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-          >
-            <option value="todos">Todos os Garçons</option>
+            {/* Garçom */}
+            <select
+              value={selectedWaiter}
+              onChange={e => setSelectedWaiter(e.target.value)}
+              className="bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+            >
+              <option value="todos">{t.analytics.allWaiters}</option>
             <option value="Carlos Santos">Carlos Santos</option>
             <option value="Marta Ferreira">Marta Ferreira</option>
             <option value="Tiago Silva">Tiago Silva</option>
@@ -654,6 +660,7 @@ export default function AnalyticsPage() {
       </div>
         </>
       )}
+      </main>
     </div>
   );
 }

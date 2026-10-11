@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Sidebar } from "../components/navigation/Sidebar";
 import { ThemeToggle } from "../components/common/ThemeToggle";
+import { LanguageSelector } from "../components/common/LanguageSelector";
 import { useAuth } from "../context/AuthContext";
 import { financeService } from "../services/financeService";
 import { formatCurrency } from "../lib/currency";
@@ -69,6 +70,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSelector />
             <ThemeToggle />
           </div>
         </header>

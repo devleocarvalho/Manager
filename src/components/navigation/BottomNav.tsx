@@ -17,11 +17,14 @@ import {
   CalendarCheck 
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { ThemeToggle } from "../common/ThemeToggle";
+import { LanguageSelector } from "../common/LanguageSelector";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { logout, tenantProfile } = useAuth();
+  const { t } = useLanguage();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Não exibe em rotas públicas ou login
@@ -30,11 +33,11 @@ export function BottomNav() {
   }
 
   const items = [
-    { name: "Cockpit", href: "/", icon: TrendingUp },
-    { name: "Mesas", href: "/mesas", icon: UtensilsCrossed },
-    { name: "Garçom", href: "/garcom", icon: Smartphone },
-    { name: "PDV", href: "/pdv", icon: ShoppingCart },
-    { name: "Cozinha", href: "/cozinha", icon: ChefHat },
+    { name: t.nav.cockpit, href: "/", icon: TrendingUp },
+    { name: t.nav.tables, href: "/mesas", icon: UtensilsCrossed },
+    { name: t.nav.waiterMode, href: "/garcom", icon: Smartphone },
+    { name: t.nav.pos, href: "/pdv", icon: ShoppingCart },
+    { name: t.nav.kitchen, href: "/cozinha", icon: ChefHat },
   ];
 
   return (
@@ -45,8 +48,8 @@ export function BottomNav() {
           <div className="bg-card border-t border-border rounded-t-3xl p-6 space-y-4 animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div>
-                <h3 className="font-black text-foreground text-base">Mais Funções</h3>
-                <p className="text-xs text-muted-foreground">{tenantProfile?.businessName || "Meu Restaurante"}</p>
+                <h3 className="font-black text-foreground text-base">{t.nav.moreFunctions}</h3>
+                <p className="text-xs text-muted-foreground">{tenantProfile?.businessName || (t.common.demoMode)}</p>
               </div>
               <button 
                 onClick={() => setShowMoreMenu(false)}
@@ -62,38 +65,41 @@ export function BottomNav() {
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs font-black text-primary col-span-2"
               >
-                <CalendarCheck size={16} /> Reservas & Agendamentos (Novo)
+                <CalendarCheck size={16} /> {t.nav.reservations}
               </Link>
               <Link
                 href="/analytics"
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold text-foreground col-span-2"
               >
-                <TrendingUp size={16} /> Inteligência & BI
+                <TrendingUp size={16} /> {t.nav.analytics}
               </Link>
               <Link
                 href="/estoque"
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold text-foreground"
               >
-                <Package size={16} /> Estoque & Lotes
+                <Package size={16} /> {t.nav.inventory}
               </Link>
               <Link
                 href="/financeiro"
                 onClick={() => setShowMoreMenu(false)}
                 className="flex items-center gap-2.5 p-3 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold text-foreground"
               >
-                <Wallet size={16} /> Financeiro & DRE
+                <Wallet size={16} /> {t.nav.finance}
               </Link>
             </div>
 
-            <div className="pt-3 border-t border-border flex items-center justify-between">
-              <ThemeToggle />
+            <div className="pt-3 border-t border-border flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <LanguageSelector className="flex-1" />
+                <ThemeToggle />
+              </div>
               <button
                 onClick={() => { setShowMoreMenu(false); logout(); }}
-                className="flex items-center gap-2 text-xs font-bold text-destructive px-3 py-2 rounded-xl bg-destructive/10"
+                className="flex items-center justify-center gap-2 text-xs font-bold text-destructive py-2.5 rounded-xl bg-destructive/10 hover:bg-destructive/20 transition-colors w-full"
               >
-                <LogOut size={15} /> Encerrar Sessão
+                <LogOut size={15} /> {t.common.endSession}
               </button>
             </div>
           </div>
@@ -123,7 +129,7 @@ export function BottomNav() {
           className="flex flex-col items-center justify-center py-1 px-2 text-muted-foreground hover:text-foreground"
         >
           <Menu size={20} />
-          <span className="text-[10px] mt-0.5 tracking-tight font-medium">Mais</span>
+          <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t.nav.moreFunctions}</span>
         </button>
       </nav>
     </>

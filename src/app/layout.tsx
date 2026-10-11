@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
+import { LanguageProvider } from "../context/LanguageContext";
 import { SubscriptionGate } from "../components/common/SubscriptionGate";
 import { BottomNav } from "../components/navigation/BottomNav";
 
@@ -22,16 +23,18 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="pt-PT"
+      lang="en"
       className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col pb-16 md:pb-0">
-        <AuthProvider>
-          <SubscriptionGate>
-            {children}
-            <BottomNav />
-          </SubscriptionGate>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <SubscriptionGate>
+              {children}
+              <BottomNav />
+            </SubscriptionGate>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -127,5 +127,47 @@ export const stockService = {
       console.warn("Erro na dedução de estoque:", e);
       return [`Erro ao processar baixa de ${menuItemName}`];
     }
+  },
+
+  /**
+   * Salva ou atualiza uma Ficha Técnica (Escandallo) no Firestore
+   */
+  async saveTechnicalSheet(sheet: TechnicalSheet) {
+    if (!sheet.tenant_id || !sheet.menuItemName) return null;
+
+    try {
+      const q = query(
+        collection(db, "technical_sheets"),
+        where("tenant_id", "==", sheet.tenant_id),
+        where("menuItemName", "==", sheet.menuItemName)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docId = snap.docs[0].id;
+        await updateDoc(doc(db, "technical_sheets", docId), { ...sheet });
+        return docId;
+      } else {
+        const docRef = await addDoc(collection(db, "technical_sheets"), sheet);
+        return docRef.id;
+      }
+    } catch (error) {
+      console.error("Erro ao salvar ficha técnica no Firestore:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Escuta as fichas técnicas salvas para o restaurante
+   */
+  subscribeTechnicalSheets(tenantId: string, onUpdate: (sheets: TechnicalSheet[]) => void) {
+    if (!tenantId) return () => {};
+    const q = query(
+      collection(db, "technical_sheets"),
+      where("tenant_id", "==", tenantId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TechnicalSheet));
+      onUpdate(list);
+    });
   }
 };

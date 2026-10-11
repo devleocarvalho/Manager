@@ -23,6 +23,7 @@ import { tableService } from "../../services/tableService";
 import { MenuItem, CurrencyCode } from "../../domain/types";
 import { formatCurrency } from "../../lib/currency";
 import { ThemeToggle } from "../../components/common/ThemeToggle";
+import { LanguageSelector } from "../../components/common/LanguageSelector";
 
 function CardapioContent() {
   const searchParams = useSearchParams();
@@ -224,6 +225,7 @@ function CardapioContent() {
               <Bell size={14} className={waiterCalled ? "fill-white" : ""} />
               <span>{waiterCalled ? "Garçom Chamado!" : "Chamar Garçom"}</span>
             </button>
+            <LanguageSelector />
             <ThemeToggle />
           </div>
         </div>
